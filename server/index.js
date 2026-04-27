@@ -2,8 +2,22 @@ import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import path from 'path';
+import fs from 'fs';
 import { fileURLToPath } from 'url';
 import { db } from './db.js';
+
+// Routes
+import authRoutes from './routes/auth.js';
+import courseRoutes from './routes/courses.js';
+import studentRoutes from './routes/students.js';
+import adminRoutes from './routes/admin.js';
+import projectRoutes from './routes/projects.js';
+import batchesRouter from './routes/batches.js';
+import modulesRouter from './routes/modules.js';
+import videosRouter from './routes/videos.js';
+import attendanceRouter from './routes/attendance.js';
+import youtubeRouter from './routes/youtube.js';
+
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -14,7 +28,6 @@ const app = express();
 const PORT = process.env.PORT || 5002;
 
 // Ensure uploads directory exists
-import fs from 'fs';
 const uploadsDir = path.join(__dirname, 'uploads');
 if (!fs.existsSync(uploadsDir)) {
     fs.mkdirSync(uploadsDir, { recursive: true });
@@ -36,18 +49,6 @@ app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 console.log("Database URL:", process.env.TURSO_DATABASE_URL ? "Loaded" : "Not Loaded");
 
 // Routes
-import authRoutes from './routes/auth.js';
-import courseRoutes from './routes/courses.js';
-import studentRoutes from './routes/students.js';
-import adminRoutes from './routes/admin.js';
-import projectRoutes from './routes/projects.js';
-import batchesRouter from './routes/batches.js';
-import modulesRouter from './routes/modules.js';
-import videosRouter from './routes/videos.js';
-
-import attendanceRouter from './routes/attendance.js';
-import youtubeRouter from './routes/youtube.js';
-
 app.use('/api/auth', authRoutes);
 app.use('/api/courses', courseRoutes);
 app.use('/api/students', studentRoutes);
@@ -58,6 +59,7 @@ app.use('/api/modules', modulesRouter);
 app.use('/api/videos', videosRouter);
 app.use('/api/attendance', attendanceRouter);
 app.use('/api/youtube', youtubeRouter);
+
 
 app.get('/', (req, res) => {
     res.json({ message: 'Student Portal API is running' });
