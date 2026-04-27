@@ -1,0 +1,42 @@
+[
+  {
+    "id": 1,
+    "name": "prudhvi",
+    "email": "prudhvi@gmail.com"
+  },
+  {
+    "id": 2,
+    "name": "Sai Updated",
+    "email": "sai@gmail.com"
+  },
+  {
+    "id": 3,
+    "name": "Admin User",
+    "email": "admin@cynex.ai"
+  },
+  {
+    "id": 4,
+    "name": "Super Admin",
+    "email": "super@cynex.ai"
+  },
+  {
+    "id": 5,
+    "name": "Raj",
+    "email": "raj@gmail.com"
+  },
+  {
+    "id": 6,
+    "name": "Venky",
+    "email": "venky@gmail.com"
+  },
+  {
+    "id": 1000,
+    "name": "Admin User",
+    "email": "admin@gmail.com"
+  },
+  {
+    "id": 1001,
+    "name": "Student User",
+    "email": "student@gmail.com"
+  }
+]

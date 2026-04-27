@@ -1,0 +1,26 @@
+[
+  {
+    "email": "prudhvi@gmail.com",
+    "password": "$2b$10$7mbYVxPXXet7J4/bJ3LF4u3F6LsEKaCgCsy.jR3BOln9y43kVYIMW"
+  },
+  {
+    "email": "sai@gmail.com",
+    "password": "$2b$10$EDi3ZPUKNdXiY9nvv/FkO.e7tcLv1tKccgh4QCZqwrZtKNIzinC6e"
+  },
+  {
+    "email": "admin@cynex.ai",
+    "password": "$2b$10$ZG/HFYUmYJkcj9Tn7U86wOL1caX5qZZqFBynJL1iCKRwqWDs4ijOu"
+  },
+  {
+    "email": "super@cynex.ai",
+    "password": "$2b$10$DDY05ccyKCrikMBNSZCfou7SUpBEGe1m17ddwHf9xwKHMajmBpjyO"
+  },
+  {
+    "email": "raj@gmail.com",
+    "password": "$2b$10$vLKlYgRfPraPdTfReyIuBeSEojT8t1P6deTPtomFGTTpmcx3thVam"
+  },
+  {
+    "email": "venky@gmail.com",
+    "password": "$2b$10$DgXwDOpG0rdxckCRUVjItelk50UsQK2rKzZ3FBPjKiF0wKtJ5Lqoy"
+  }
+]

@@ -1,0 +1,87 @@
+{
+  "enrollments": [
+    {
+      "id": 1,
+      "student_id": 1,
+      "course_id": 3,
+      "enrolled_at": "2026-02-17 10:49:42"
+    },
+    {
+      "id": 2,
+      "student_id": 2,
+      "course_id": 4,
+      "enrolled_at": "2026-02-18 07:15:31"
+    },
+    {
+      "id": 3,
+      "student_id": 6,
+      "course_id": 3,
+      "enrolled_at": "2026-02-18 07:46:51"
+    },
+    {
+      "id": 4,
+      "student_id": 6,
+      "course_id": 4,
+      "enrolled_at": "2026-02-18 07:47:37"
+    },
+    {
+      "id": 5,
+      "student_id": 5,
+      "course_id": 3,
+      "enrolled_at": "2026-03-02 12:26:32"
+    },
+    {
+      "id": 6,
+      "student_id": 2,
+      "course_id": 3,
+      "enrolled_at": "2026-03-02 12:36:38"
+    }
+  ],
+  "batch_courses": [
+    {
+      "id": 1,
+      "batch_id": 1,
+      "course_id": 3,
+      "assigned_at": "2026-02-17 06:42:42"
+    },
+    {
+      "id": 6,
+      "batch_id": 1,
+      "course_id": 4,
+      "assigned_at": "2026-03-02 12:23:53"
+    }
+  ],
+  "users": [
+    {
+      "id": 1,
+      "name": "prudhvi",
+      "batch_id": 1
+    },
+    {
+      "id": 2,
+      "name": "Sai",
+      "batch_id": null
+    },
+    {
+      "id": 3,
+      "name": "Admin User",
+      "batch_id": null
+    },
+    {
+      "id": 4,
+      "name": "Super Admin",
+      "batch_id": 1
+    },
+    {
+      "id": 5,
+      "name": "Sasasasai",
+      "batch_id": 1
+    },
+    {
+      "id": 6,
+      "name": "Venky",
+      "batch_id": 1
+    }
+  ],
+  "students": []
+}
