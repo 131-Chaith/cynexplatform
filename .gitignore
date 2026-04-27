@@ -128,5 +128,7 @@ db_data.txt
 !/package.json
 !/package-lock.json
 !/index.html
+!/vercel.json
+
 
 
