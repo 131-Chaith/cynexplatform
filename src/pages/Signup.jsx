@@ -41,6 +41,7 @@ const Signup = () => {
         try {
             const result = await register(formData.name, formData.email, formData.password, 'student');
             if (result.success) {
+                alert('Registration completed successfully.');
                 navigate('/login');
             } else {
                 setError(result.message);
