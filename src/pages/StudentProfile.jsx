@@ -2,9 +2,10 @@ import React, { useState, useEffect } from 'react';
 import api from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import Card from '../components/Card';
+import { motion, AnimatePresence } from 'framer-motion';
 import {
     User, Mail, Phone, Calendar, MapPin, BookOpen,
-    Award, FileText, PlayCircle, Users, Edit3, Save, X, CheckCircle, GraduationCap
+    Award, FileText, PlayCircle, Users, Edit3, Save, X, CheckCircle, GraduationCap, RefreshCw
 } from 'lucide-react';
 
 const StudentProfile = () => {
@@ -390,12 +391,25 @@ const StudentProfile = () => {
                     <Card style={{ padding: '2rem', borderRadius: '1.25rem' }}>
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
                             <div>
-                                <h3 style={{ fontSize: '1.25rem', fontWeight: '800', color: '#1E293B', marginBottom: '0.25rem' }}>Personal Details</h3>
+                                <h3 style={{ fontSize: '1.25rem', fontWeight: '800', color: '#1E293B', marginBottom: '0.25rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                    <User size={20} color="#10B981" />
+                                    Personal Details
+                                </h3>
                                 <p style={{ fontSize: '0.875rem', color: '#64748B' }}>Primary identity and contact information</p>
                             </div>
-                            <div style={{ width: '48px', height: '48px', backgroundColor: '#F0FDF4', color: '#16A34A', borderRadius: '14px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                                <User size={24} />
-                            </div>
+                            <motion.button 
+                                whileHover={{ scale: 1.05, backgroundColor: '#DCFCE7' }}
+                                whileTap={{ scale: 0.95 }}
+                                onClick={() => setEditing(true)}
+                                title="Edit Personal Details"
+                                style={{ 
+                                    width: '48px', height: '48px', backgroundColor: '#F0FDF4', color: '#16A34A', 
+                                    borderRadius: '14px', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                    border: 'none', cursor: 'pointer', transition: 'all 0.2s'
+                                }}
+                            >
+                                <Edit3 size={22} />
+                            </motion.button>
                         </div>
 
                         {editing ? (
@@ -458,12 +472,25 @@ const StudentProfile = () => {
                     <Card style={{ padding: '2rem', borderRadius: '1.25rem' }}>
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
                             <div>
-                                <h3 style={{ fontSize: '1.25rem', fontWeight: '800', color: '#1E293B', marginBottom: '0.25rem' }}>Academic Profile</h3>
+                                <h3 style={{ fontSize: '1.25rem', fontWeight: '800', color: '#1E293B', marginBottom: '0.25rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                    <GraduationCap size={20} color="#6366F1" />
+                                    Academic Profile
+                                </h3>
                                 <p style={{ fontSize: '0.875rem', color: '#64748B' }}>Educational background and qualifications</p>
                             </div>
-                            <div style={{ width: '48px', height: '48px', backgroundColor: '#EFF6FF', color: '#2563EB', borderRadius: '14px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                                <BookOpen size={24} />
-                            </div>
+                            <motion.button 
+                                whileHover={{ scale: 1.05, backgroundColor: '#DBEAFE' }}
+                                whileTap={{ scale: 0.95 }}
+                                onClick={() => setEditing(true)}
+                                title="Edit Academic Profile"
+                                style={{ 
+                                    width: '48px', height: '48px', backgroundColor: '#EFF6FF', color: '#2563EB', 
+                                    borderRadius: '14px', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                    border: 'none', cursor: 'pointer', transition: 'all 0.2s'
+                                }}
+                            >
+                                <Edit3 size={22} />
+                            </motion.button>
                         </div>
 
                         {editing ? (
@@ -512,12 +539,25 @@ const StudentProfile = () => {
                     <Card style={{ padding: '2rem', borderRadius: '1.25rem' }}>
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
                             <div>
-                                <h3 style={{ fontSize: '1.25rem', fontWeight: '800', color: '#1E293B', marginBottom: '0.25rem' }}>Skills & Experience</h3>
+                                <h3 style={{ fontSize: '1.25rem', fontWeight: '800', color: '#1E293B', marginBottom: '0.25rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                    <Award size={20} color="#7C3AED" />
+                                    Skills & Experience
+                                </h3>
                                 <p style={{ fontSize: '0.875rem', color: '#64748B' }}>Professional toolkit and career highlights</p>
                             </div>
-                            <div style={{ width: '48px', height: '48px', backgroundColor: '#F5F3FF', color: '#7C3AED', borderRadius: '14px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                                <Award size={24} />
-                            </div>
+                            <motion.button 
+                                whileHover={{ scale: 1.05, backgroundColor: '#F5F3FF' }}
+                                whileTap={{ scale: 0.95 }}
+                                onClick={() => setEditing(true)}
+                                title="Edit Skills & Experience"
+                                style={{ 
+                                    width: '48px', height: '48px', backgroundColor: '#F5F3FF', color: '#7C3AED', 
+                                    borderRadius: '14px', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                    border: 'none', cursor: 'pointer', transition: 'all 0.2s'
+                                }}
+                            >
+                                <Edit3 size={22} />
+                            </motion.button>
                         </div>
 
                         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '2rem' }}>

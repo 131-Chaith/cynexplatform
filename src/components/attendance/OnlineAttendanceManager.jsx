@@ -56,7 +56,13 @@ const OnlineAttendanceManager = ({ userRole }) => {
         } catch (e) { showMsg('Failed to load report', 'error'); }
     };
 
-    useEffect(() => { fetchSessions(); }, []);
+    useEffect(() => { 
+        fetchSessions(); 
+        const interval = setInterval(() => {
+            if (!loading && !pulling) fetchSessions();
+        }, 10000);
+        return () => clearInterval(interval);
+    }, []);
 
     useEffect(() => {
         if (selectedSession) fetchReport(selectedSession.id);

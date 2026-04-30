@@ -137,17 +137,17 @@ const AdminStudents = () => {
         }
     };
 
-    const handleDelete = async (studentId) => {
-        if (!window.confirm("Are you sure you want to delete this student (ID: " + studentId + ")?")) return;
+    const handleDelete = async (student) => {
+        if (!window.confirm(`CRITICAL ACTION: Are you sure you want to terminate Operative "${student.name}"? This will purge all associated records, attendance, and certificates from the system.`)) return;
         
         try {
-            console.log(`Sending delete request for ID: ${studentId}`);
-            await api.delete(`admin/students/${studentId}`);
-            alert("Student Deleted Successfully!");
+            console.log(`[TERMINATION] Initiating purge for ID: ${student.id}`);
+            const res = await api.delete(`admin/students/${student.id}`);
+            alert(res.data.message || "Student Terminated Successfully!");
             fetchData(); // Reload data
         } catch (error) {
-            console.error("Delete Error:", error);
-            alert("Failed to delete student: " + (error.response?.data?.message || error.message));
+            console.error("Termination Error:", error);
+            alert("Termination Protocol Failed: " + (error.response?.data?.message || error.message));
         }
     };
 
@@ -292,7 +292,7 @@ const AdminStudents = () => {
                                         <Button 
                                             variant="danger"
                                             size="small"
-                                            onClick={(e) => { e.stopPropagation(); handleDelete(student.id); }}
+                                            onClick={(e) => { e.stopPropagation(); handleDelete(student); }}
                                             style={{ 
                                                 flex: 1, 
                                                 borderRadius: '12px', 

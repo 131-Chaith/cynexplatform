@@ -91,9 +91,14 @@ router.post('/sessions', authenticateToken, authorizeRole('admin', 'instructor')
             qr_expiry = new Date(new Date(startDateTime).getTime() + (duration_mins || 60) * 60000).toISOString();
         }
 
+        // Determine initial status based on start time
+        const startTimestamp = new Date(startDateTime).getTime();
+        const nowTimestamp = Date.now();
+        const status = (startTimestamp > nowTimestamp + 300000) ? 'scheduled' : 'ongoing';
+
         const result = await db.execute({
             sql: `INSERT INTO attendance_sessions (type, batch_id, course_id, instructor_id, topic, meet_link, qr_token, qr_expiry, gps_lat, gps_lng, status, threshold_percentage, duration_mins, start_time) 
-                  VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'ongoing', ?, ?, ?)`,
+                  VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
             args: [
                 type, 
                 batch_id || null, 
@@ -105,6 +110,7 @@ router.post('/sessions', authenticateToken, authorizeRole('admin', 'instructor')
                 qr_expiry, 
                 gps_lat || null, 
                 gps_lng || null,
+                status,
                 threshold_percentage || 75,
                 duration_mins || 60,
                 startDateTime
@@ -142,6 +148,34 @@ router.get('/sessions/:id/count', authenticateToken, async (req, res) => {
     }
 });
 
+// Get upcoming sessions for a batch (Student)
+router.get('/sessions/upcoming', authenticateToken, async (req, res) => {
+    try {
+        const userRes = await db.execute({
+            sql: "SELECT batch_id FROM users WHERE id = ?",
+            args: [req.user.id]
+        });
+        const batchId = userRes.rows[0]?.batch_id;
+
+        const sessions = await db.execute({
+            sql: `SELECT s.*, u.name as instructor_name, c.title as course_title, b.batch_name
+                  FROM attendance_sessions s
+                  JOIN users u ON s.instructor_id = u.id
+                  JOIN courses c ON s.course_id = c.id
+                  LEFT JOIN batches b ON s.batch_id = b.id
+                  WHERE (s.batch_id = ? OR s.batch_id IS NULL) 
+                  AND s.status = 'ongoing' 
+                  AND s.start_time > datetime('now')
+                  ORDER BY s.start_time ASC`,
+            args: [batchId]
+        });
+
+        res.json(sessions.rows);
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+});
+
 // Get active sessions for a batch (Student)
 router.get('/sessions/active', authenticateToken, async (req, res) => {
     try {
@@ -157,11 +191,13 @@ router.get('/sessions/active', authenticateToken, async (req, res) => {
                   JOIN users u ON s.instructor_id = u.id
                   JOIN courses c ON s.course_id = c.id
                   LEFT JOIN batches b ON s.batch_id = b.id
-                  WHERE (s.batch_id = ? OR s.batch_id IS NULL) AND s.status = 'ongoing'
+                  WHERE (s.batch_id = ? OR s.batch_id IS NULL) 
+                  AND s.status = 'ongoing'
                   ORDER BY s.start_time DESC`,
             args: [batchId]
         });
 
+        console.log(`[DEBUG] Active Sessions for Student (Batch: ${batchId}):`, sessions.rows.length);
         res.json(sessions.rows);
     } catch (error) {
         res.status(500).json({ message: error.message });

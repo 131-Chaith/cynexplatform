@@ -51,7 +51,14 @@ const OfflineAttendanceManager = ({ userRole }) => {
         } catch (e) { showMsg('Failed to load report', 'error'); }
     };
 
-    useEffect(() => { fetchSessions(); }, []);
+    useEffect(() => { 
+        fetchSessions(); 
+        const interval = setInterval(() => {
+            // Only poll if not currently loading or pulling
+            if (!loading) fetchSessions();
+        }, 10000);
+        return () => clearInterval(interval);
+    }, []);
 
     useEffect(() => {
         if (selectedSession) fetchReport(selectedSession.id);

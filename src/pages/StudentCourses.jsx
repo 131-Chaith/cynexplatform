@@ -224,6 +224,21 @@ const StudentCourses = () => {
                                         }}>
                                             PROGRAM
                                         </div>
+                                        {course.is_allocated && !course.is_enrolled && (
+                                            <div style={{
+                                                padding: '0.3rem 0.6rem',
+                                                background: 'rgba(16, 185, 129, 0.2)',
+                                                borderRadius: '0.5rem',
+                                                color: '#10B981',
+                                                fontSize: '0.65rem',
+                                                fontWeight: '900',
+                                                letterSpacing: '0.1em',
+                                                textTransform: 'uppercase',
+                                                border: '1px solid rgba(16, 185, 129, 0.3)'
+                                            }}>
+                                                ALLOCATED
+                                            </div>
+                                        )}
                                     </div>
 
                                     <h3 style={{

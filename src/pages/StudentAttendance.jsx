@@ -10,7 +10,6 @@ import api from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import Button from '../components/Button';
 import QRScanner from '../components/attendance/QRScanner';
-import AttendanceCalendar from '../components/attendance/AttendanceCalendar';
 import AttendanceAnalytics from '../components/attendance/AttendanceAnalytics';
 import AttendanceNotifications from '../components/attendance/AttendanceNotifications';
 import { useLocation, useNavigate } from 'react-router-dom';
@@ -21,6 +20,7 @@ const StudentAttendance = () => {
     const location = useLocation();
     const navigate = useNavigate();
     const [sessions, setSessions] = useState([]);
+    const [upcomingSessions, setUpcomingSessions] = useState([]);
     const [history, setHistory] = useState([]);
     const [stats, setStats] = useState(null);
     const [analytics, setAnalytics] = useState(null);
@@ -54,18 +54,24 @@ const StudentAttendance = () => {
 
     const fetchData = async () => {
         try {
-            const [sessionsRes, historyRes, statsRes, analyticsRes, notifRes] = await Promise.all([
+            const results = await Promise.allSettled([
                 api.get('attendance/sessions/active'),
+                api.get('attendance/sessions/upcoming'),
                 api.get('attendance/history/my'),
                 api.get('attendance/student/stats'),
                 api.get('attendance/analytics'),
                 api.get('attendance/notifications')
             ]);
-            setSessions(sessionsRes.data || []);
-            setHistory(historyRes.data || []);
-            setStats(statsRes.data);
-            setAnalytics(analyticsRes.data);
-            setNotifications(notifRes.data || []);
+
+            if (results[0].status === 'fulfilled') {
+                console.log('[DEBUG] Active Sessions Received:', results[0].value.data);
+                setSessions(results[0].value.data || []);
+            }
+            if (results[1].status === 'fulfilled') setUpcomingSessions(results[1].value.data || []);
+            if (results[2].status === 'fulfilled') setHistory(results[2].value.data || []);
+            if (results[3].status === 'fulfilled') setStats(results[3].value.data);
+            if (results[4].status === 'fulfilled') setAnalytics(results[4].value.data);
+            if (results[5].status === 'fulfilled') setNotifications(results[5].value.data || []);
         } catch (error) {
             console.error("Error fetching student attendance:", error);
         } finally {
@@ -160,7 +166,8 @@ const StudentAttendance = () => {
                     <h1 style={{ fontSize: '2.5rem', fontWeight: '900', color: '#0F172A', letterSpacing: '-0.04em' }}>
                         {activeTab === 'dashboard' ? 'Attendance Hub' : 
                          activeTab === 'online' ? 'Live Classes' : 
-                         activeTab === 'scan' ? 'QR Scanner' : 'My History'}
+                         activeTab === 'scan' ? 'QR Scanner' : 
+                         activeTab === 'calendar' ? 'Class Schedule' : 'My History'}
                     </h1>
                 </div>
                 <div style={{ background: 'white', padding: '1rem 1.5rem', borderRadius: '1.5rem', border: '1px solid #F1F5F9', boxShadow: '0 10px 15px -3px rgba(0,0,0,0.02)', display: 'flex', alignItems: 'center', gap: '1.5rem' }}>
@@ -179,9 +186,22 @@ const StudentAttendance = () => {
             {/* Navigation Tabs */}
             <div style={{ display: 'flex', gap: '0.75rem', marginBottom: '2.5rem', overflowX: 'auto', paddingBottom: '0.5rem' }}>
                 <ActionTab active={activeTab === 'dashboard'} onClick={() => setActiveTab('dashboard')} label="Summary" icon={<TrendingUp size={18} />} />
-                <ActionTab active={activeTab === 'online'} onClick={() => setActiveTab('online')} label="Live Meet" icon={<Video size={18} />} />
-                <ActionTab active={activeTab === 'scan'} onClick={() => setActiveTab('scan')} label="QR Scanner" icon={<QrCode size={18} />} />
-                <ActionTab active={activeTab === 'calendar'} onClick={() => setActiveTab('calendar')} label="Calendar" icon={<CalendarIcon size={18} />} />
+                <ActionTab 
+                    active={activeTab === 'online'} 
+                    onClick={() => setActiveTab('online')} 
+                    label="Live Meet" 
+                    icon={<Video size={18} />} 
+                    badge={sessions.filter(s => s.type === 'online').length}
+                    badgeColor="#6366F1"
+                />
+                <ActionTab 
+                    active={activeTab === 'scan'} 
+                    onClick={() => setActiveTab('scan')} 
+                    label="QR Scanner" 
+                    icon={<QrCode size={18} />} 
+                    badge={sessions.filter(s => s.type === 'offline').length}
+                    badgeColor="#F59E0B"
+                />
             </div>
 
             {loading ? (
@@ -298,7 +318,7 @@ const StudentAttendance = () => {
 
 // --- Specialized UI Components ---
 
-const ActionTab = ({ active, onClick, label, icon }) => (
+const ActionTab = ({ active, onClick, label, icon, badge, badgeColor }) => (
     <motion.button 
         whileHover={{ y: -3 }}
         whileTap={{ scale: 0.95 }}
@@ -308,10 +328,21 @@ const ActionTab = ({ active, onClick, label, icon }) => (
             background: active ? '#6366F1' : 'white', color: active ? 'white' : '#64748B',
             borderRadius: '16px', border: '1px solid', borderColor: active ? '#6366F1' : '#F1F5F9',
             boxShadow: active ? '0 10px 15px -3px rgba(99, 102, 241, 0.3)' : '0 4px 6px -1px rgba(0,0,0,0.02)',
-            cursor: 'pointer', fontWeight: '800', transition: 'all 0.2s', whiteSpace: 'nowrap'
+            cursor: 'pointer', fontWeight: '800', transition: 'all 0.2s', whiteSpace: 'nowrap',
+            position: 'relative'
         }}
     >
         {icon} {label}
+        {badge > 0 && (
+            <span style={{ 
+                background: active ? 'white' : (badgeColor || '#6366F1'), 
+                color: active ? (badgeColor || '#6366F1') : 'white',
+                fontSize: '0.65rem', padding: '0.2rem 0.45rem', borderRadius: '50%',
+                minWidth: '20px', textAlign: 'center', fontWeight: '900'
+            }}>
+                {badge}
+            </span>
+        )}
     </motion.button>
 );
 

@@ -337,75 +337,55 @@ router.put('/students/:id', authenticateToken, authorizeRole('admin'), async (re
 router.delete('/students/:id', authenticateToken, authorizeRole('admin'), async (req, res) => {
     const userId = req.params.id;
     try {
-        console.log(`Starting deletion process for Operative ID: ${userId}`);
+        console.log(`[TERMINATION] Starting full purge for Operative ID: ${userId}`);
 
-        // 1. Delete Attendance Records (both tables if they exist)
-        await db.execute({
-            sql: "DELETE FROM attendance_records WHERE student_id = ?",
-            args: [userId]
-        });
-        await db.execute({
-            sql: "DELETE FROM attendance WHERE student_id = ?",
-            args: [userId]
-        });
+        // 1. Delete Attendance Data (Comprehensive)
+        const attendanceTables = ['attendance_records', 'attendance', 'qr_attendance_records'];
+        for (const table of attendanceTables) {
+            try {
+                await db.execute({
+                    sql: `DELETE FROM ${table} WHERE student_id = ?`,
+                    args: [userId]
+                });
+            } catch (e) {
+                console.warn(`[TERMINATION] Table ${table} might not have student_id or doesn't exist:`, e.message);
+            }
+        }
 
-        // 2. Delete Course Enrollments
-        await db.execute({
-            sql: "DELETE FROM enrollments WHERE student_id = ?",
-            args: [userId]
-        });
+        // 2. Delete Course & Academic Data
+        await db.execute({ sql: "DELETE FROM enrollments WHERE student_id = ?", args: [userId] });
+        await db.execute({ sql: "DELETE FROM submissions WHERE student_id = ?", args: [userId] });
+        await db.execute({ sql: "DELETE FROM test_results WHERE student_id = ?", args: [userId] });
 
-        // 3. Delete Submissions & Test Results
-        await db.execute({
-            sql: "DELETE FROM submissions WHERE student_id = ?",
-            args: [userId]
-        });
-        await db.execute({
-            sql: "DELETE FROM test_results WHERE student_id = ?",
-            args: [userId]
-        });
+        // 3. Delete Projects & Certification Requests
+        await db.execute({ sql: "DELETE FROM projects WHERE student_id = ?", args: [userId] });
+        await db.execute({ sql: "DELETE FROM certificate_requests WHERE student_id = ?", args: [userId] });
+        await db.execute({ sql: "DELETE FROM certificates WHERE student_id = ?", args: [userId] });
 
-        // 4. Delete Projects & Certificates
-        await db.execute({
-            sql: "DELETE FROM projects WHERE student_id = ?",
-            args: [userId]
-        });
-        await db.execute({
-            sql: "DELETE FROM certificate_requests WHERE student_id = ?",
-            args: [userId]
-        });
-        await db.execute({
-            sql: "DELETE FROM certificates WHERE student_id = ?",
-            args: [userId]
-        });
+        // 4. Delete Logs & Notifications
+        await db.execute({ sql: "DELETE FROM activity_logs WHERE user_id = ?", args: [userId] });
+        await db.execute({ sql: "DELETE FROM notifications WHERE user_id = ?", args: [userId] });
 
-        // 5. Delete Activity Logs & Notifications
-        await db.execute({
-            sql: "DELETE FROM activity_logs WHERE user_id = ?",
-            args: [userId]
-        });
-        await db.execute({
-            sql: "DELETE FROM notifications WHERE user_id = ?",
-            args: [userId]
-        });
+        // 5. Delete Profile Extension
+        await db.execute({ sql: "DELETE FROM students WHERE user_id = ?", args: [userId] });
 
-        // 6. Delete Student Profile Extension
-        await db.execute({
-            sql: "DELETE FROM students WHERE user_id = ?",
-            args: [userId]
-        });
-
-        // 7. Finally delete the core User Identity
+        // 6. Finally delete the core User Identity
         const result = await db.execute({
             sql: "DELETE FROM users WHERE id = ?",
             args: [userId]
         });
 
-        console.log(`Deletion successful for Operative ID: ${userId}`);
-        res.json({ message: "Operative Terminated and Data Purged Successfully" });
+        console.log(`[TERMINATION] Purge successful for Operative ID: ${userId}`);
+        res.json({ 
+            status: 'success',
+            message: "Operative Terminated and all associated data purged from the system." 
+        });
     } catch (error) {
-        console.error("Termination Protocol Failed:", error);
-        res.status(500).json({ message: "Termination Failed: " + error.message });
+        console.error("CRITICAL: Termination Protocol Failed:", error);
+        res.status(500).json({ 
+            status: 'error',
+            message: "Termination Failed: " + error.message 
+        });
     }
 });
 

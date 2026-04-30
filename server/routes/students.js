@@ -328,12 +328,8 @@ router.get('/certificates', authenticateToken, async (req, res) => {
 // Helper: get enrolled course IDs for a student
 async function getEnrolledCourseIds(studentId) {
     const res = await db.execute({
-        sql: `
-            SELECT course_id FROM enrollments WHERE student_id = ?
-            UNION
-            SELECT course_id FROM batch_courses WHERE batch_id = (SELECT batch_id FROM users WHERE id = ?)
-        `,
-        args: [studentId, studentId]
+        sql: "SELECT course_id FROM enrollments WHERE student_id = ?",
+        args: [studentId]
     });
     
     return res.rows.map(r => r.course_id);

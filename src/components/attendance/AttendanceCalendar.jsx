@@ -2,7 +2,7 @@ import React from 'react';
 import { motion } from 'framer-motion';
 import { Calendar as CalendarIcon, ChevronLeft, ChevronRight } from 'lucide-react';
 
-const AttendanceCalendar = ({ data }) => {
+const AttendanceCalendar = ({ data = [], upcoming = [], live = [] }) => {
     const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
     const months = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
     
@@ -17,11 +17,20 @@ const AttendanceCalendar = ({ data }) => {
     for (let i = 0; i < firstDayOfMonth; i++) calendarDays.push(null);
     for (let i = 1; i <= getDaysInMonth(currentMonth, currentYear); i++) calendarDays.push(i);
 
-    const getStatusForDay = (day) => {
+    const getDayInfo = (day) => {
         if (!day) return null;
         const dateStr = `${currentYear}-${String(currentMonth + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
-        const record = data.find(r => r.join_time.startsWith(dateStr));
-        return record?.status || 'absent'; // Simple logic: if no record, assume absent for past days
+        
+        const historyRecord = data.find(r => r.join_time?.startsWith(dateStr));
+        const liveSession = live.find(s => s.start_time?.startsWith(dateStr));
+        const upcomingSession = upcoming.find(s => s.start_time?.startsWith(dateStr));
+
+        return {
+            status: historyRecord?.status || (day < today.getDate() && !historyRecord ? 'absent' : null),
+            isLive: !!liveSession,
+            isUpcoming: !!upcomingSession,
+            session: liveSession || upcomingSession
+        };
     };
 
     return (
@@ -30,10 +39,6 @@ const AttendanceCalendar = ({ data }) => {
                 <h3 style={{ fontSize: '1.25rem', fontWeight: '900', color: '#1E293B', display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
                     <CalendarIcon size={20} color="#6366F1" /> {months[currentMonth]} {currentYear}
                 </h3>
-                <div style={{ display: 'flex', gap: '0.5rem' }}>
-                    <button style={{ padding: '0.5rem', borderRadius: '8px', border: '1px solid #E2E8F0', background: 'none', cursor: 'pointer' }}><ChevronLeft size={18} /></button>
-                    <button style={{ padding: '0.5rem', borderRadius: '8px', border: '1px solid #E2E8F0', background: 'none', cursor: 'pointer' }}><ChevronRight size={18} /></button>
-                </div>
             </div>
 
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: '0.5rem', textAlign: 'center', marginBottom: '1rem' }}>
@@ -42,46 +47,60 @@ const AttendanceCalendar = ({ data }) => {
 
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: '0.75rem' }}>
                 {calendarDays.map((day, idx) => {
-                    const status = getStatusForDay(day);
+                    const info = getDayInfo(day);
                     const isToday = day === today.getDate();
                     
                     return (
                         <motion.div 
                             key={idx}
-                            whileHover={day ? { scale: 1.1 } : {}}
+                            whileHover={day ? { scale: 1.05, y: -5 } : {}}
                             style={{ 
                                 aspectRatio: '1/1', display: 'flex', alignItems: 'center', justifyContent: 'center', 
-                                borderRadius: '12px', fontSize: '0.9rem', fontWeight: '700',
-                                background: !day ? 'transparent' : (isToday ? '#EEF2FF' : '#F8FAFC'),
-                                border: isToday ? '2px solid #6366F1' : 'none',
-                                color: !day ? 'transparent' : (isToday ? '#6366F1' : '#475569'),
-                                position: 'relative'
+                                borderRadius: '16px', fontSize: '0.9rem', fontWeight: '800',
+                                background: !day ? 'transparent' : (isToday ? '#6366F1' : '#F8FAFC'),
+                                border: (info?.isLive) ? '2px solid #EF4444' : 'none',
+                                color: !day ? 'transparent' : (isToday ? 'white' : '#475569'),
+                                position: 'relative',
+                                cursor: day ? 'pointer' : 'default',
+                                boxShadow: (info?.isLive || info?.isUpcoming) ? '0 4px 12px rgba(99, 102, 241, 0.15)' : 'none'
                             }}
                         >
                             {day}
                             {day && (
-                                <div style={{ 
-                                    position: 'absolute', bottom: '6px', width: '6px', height: '6px', borderRadius: '50%',
-                                    background: status === 'present' ? '#10B981' : (status === 'late' ? '#F59E0B' : (day < today.getDate() ? '#EF4444' : 'transparent'))
-                                }}></div>
+                                <div style={{ display: 'flex', gap: '2px', position: 'absolute', bottom: '8px' }}>
+                                    {info.status && (
+                                        <div style={{ 
+                                            width: '5px', height: '5px', borderRadius: '50%',
+                                            background: info.status === 'present' ? '#10B981' : (info.status === 'late' ? '#F59E0B' : '#EF4444')
+                                        }}></div>
+                                    )}
+                                    {info.isLive && <div style={{ width: '5px', height: '5px', borderRadius: '50%', background: '#EF4444', animation: 'pulse 1.5s infinite' }}></div>}
+                                    {info.isUpcoming && <div style={{ width: '5px', height: '5px', borderRadius: '50%', background: '#6366F1' }}></div>}
+                                </div>
                             )}
                         </motion.div>
                     );
                 })}
             </div>
 
-            <div style={{ marginTop: '2rem', display: 'flex', gap: '1.5rem', justifyContent: 'center', fontSize: '0.75rem', fontWeight: '700' }}>
+            <div style={{ marginTop: '2.5rem', display: 'flex', gap: '1.25rem', flexWrap: 'wrap', justifyContent: 'center', fontSize: '0.7rem', fontWeight: '800', textTransform: 'uppercase' }}>
                 <LegendItem color="#10B981" label="Present" />
                 <LegendItem color="#EF4444" label="Absent" />
                 <LegendItem color="#F59E0B" label="Late" />
+                <LegendItem color="#EF4444" label="Live" ring />
+                <LegendItem color="#6366F1" label="Scheduled" />
             </div>
         </div>
     );
 };
 
-const LegendItem = ({ color, label }) => (
-    <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-        <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: color }}></div>
+const LegendItem = ({ color, label, ring }) => (
+    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.4rem 0.75rem', background: '#F8FAFC', borderRadius: '8px' }}>
+        <div style={{ 
+            width: '8px', height: '8px', borderRadius: '50%', background: color,
+            border: ring ? '2px solid white' : 'none',
+            boxShadow: ring ? `0 0 0 1px ${color}` : 'none'
+        }}></div>
         <span style={{ color: '#64748B' }}>{label}</span>
     </div>
 );

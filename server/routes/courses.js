@@ -24,15 +24,18 @@ router.get('/all-catalog', authenticateToken, async (req, res) => {
     try {
         const courses = await db.execute("SELECT * FROM courses");
         
-        let enrolledCourseIds = new Set();
+        let enrolledIds = new Set();
+        let allocatedIds = new Set();
+
         if (req.user && req.user.role === 'student') {
+            // 1. Direct Enrollments (The student actually clicked 'Enroll')
             const enrollments = await db.execute({
                 sql: "SELECT course_id FROM enrollments WHERE student_id = ?",
                 args: [req.user.id]
             });
-            enrollments.rows.forEach(row => enrolledCourseIds.add(row.course_id));
+            enrollments.rows.forEach(row => enrolledIds.add(row.course_id));
             
-            // Check batch enrollments
+            // 2. Batch Allocations (Allocated by Admin, but not yet enrolled)
             const userRes = await db.execute({
                 sql: "SELECT batch_id FROM users WHERE id = ?",
                 args: [req.user.id]
@@ -43,13 +46,14 @@ router.get('/all-catalog', authenticateToken, async (req, res) => {
                     sql: "SELECT course_id FROM batch_courses WHERE batch_id = ?",
                     args: [batchId]
                 });
-                batchCourses.rows.forEach(row => enrolledCourseIds.add(row.course_id));
+                batchCourses.rows.forEach(row => allocatedIds.add(row.course_id));
             }
         }
         
         const catalog = courses.rows.map(course => ({
             ...course,
-            is_enrolled: enrolledCourseIds.has(course.id)
+            is_enrolled: enrolledIds.has(course.id),
+            is_allocated: allocatedIds.has(course.id)
         }));
         
         res.json(catalog);
@@ -65,22 +69,8 @@ router.get('/', authenticateToken, async (req, res) => {
         let args = [];
 
         if (req.user.role === 'student' || req.user.email === 'student@gmail.com') {
-            // First check if student has any direct enrollments
-            const enrollCheck = await db.execute({
-                sql: "SELECT COUNT(*) as count FROM enrollments WHERE student_id = ?",
-                args: [req.user.id]
-            });
-            const hasDirectEnrollments = Number(enrollCheck.rows[0].count) > 0;
-
-            if (hasDirectEnrollments) {
-                // ONLY show directly enrolled courses
-                sql = `SELECT c.* FROM courses c WHERE c.id IN (SELECT course_id FROM enrollments WHERE student_id = ?)`;
-                args = [req.user.id];
-            } else {
-                // Fall back to batch courses ONLY if no direct enrollments
-                sql = `SELECT c.* FROM courses c WHERE c.id IN (SELECT course_id FROM batch_courses WHERE batch_id = (SELECT batch_id FROM users WHERE id = ?))`;
-                args = [req.user.id];
-            }
+            sql = `SELECT c.* FROM courses c WHERE c.id IN (SELECT course_id FROM enrollments WHERE student_id = ?)`;
+            args = [req.user.id];
         }
 
         const result = await db.execute({ sql, args });
