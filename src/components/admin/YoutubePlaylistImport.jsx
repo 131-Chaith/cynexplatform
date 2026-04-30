@@ -162,28 +162,30 @@ const YoutubePlaylistImport = ({ courses, modules, onImportComplete, onClose }) 
     // ── STYLES ────────────────────────────────────────────────────────────
     const S = {
         overlay: {
-            position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.75)',
-            backdropFilter: 'blur(8px)', zIndex: 2000,
+            position: 'fixed', inset: 0, 
+            background: 'rgba(255, 255, 255, 0.7)',
+            backdropFilter: 'blur(12px)', 
+            zIndex: 2000,
             display: 'flex', alignItems: 'center', justifyContent: 'center',
             padding: '1rem'
         },
         modal: {
-            background: 'linear-gradient(135deg, #0f172a 0%, #1e293b 100%)',
-            border: '1px solid rgba(56,189,248,0.2)',
-            borderRadius: '1.5rem',
+            background: '#ffffff',
+            border: 'none',
+            borderRadius: '2.5rem',
             width: '100%', maxWidth: '900px',
             maxHeight: '90vh', overflowY: 'auto',
             position: 'relative',
-            boxShadow: '0 40px 80px -20px rgba(0,0,0,0.8)'
+            boxShadow: '0 40px 80px -20px rgba(0,0,0,0.2)'
         },
         header: {
-            padding: '1.75rem 2rem',
-            borderBottom: '1px solid rgba(255,255,255,0.06)',
+            padding: '2rem 2.5rem',
+            borderBottom: '1px solid #f1f5f9',
             display: 'flex', alignItems: 'center', justifyContent: 'space-between',
             position: 'sticky', top: 0,
-            background: 'linear-gradient(135deg, #0f172a 0%, #1e293b 100%)',
+            background: '#ffffff',
             zIndex: 10,
-            borderRadius: '1.5rem 1.5rem 0 0'
+            borderRadius: '2.5rem 2.5rem 0 0'
         },
         body: { padding: '1.75rem 2rem' },
         section: {
@@ -193,16 +195,16 @@ const YoutubePlaylistImport = ({ courses, modules, onImportComplete, onClose }) 
         },
         label: { fontSize: '0.75rem', fontWeight: '800', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '0.5rem', display: 'block' },
         input: {
-            width: '100%', padding: '0.7rem 1rem',
-            background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(255,255,255,0.1)',
-            borderRadius: '0.625rem', color: '#f8fafc', fontSize: '0.9rem',
-            outline: 'none', boxSizing: 'border-box'
+            width: '100%', padding: '0.875rem 1.25rem',
+            background: '#f8fafc', border: '1px solid #e2e8f0',
+            borderRadius: '1rem', color: '#0f172a', fontSize: '0.9rem',
+            fontWeight: '500', outline: 'none', boxSizing: 'border-box'
         },
         select: {
-            width: '100%', padding: '0.7rem 1rem',
-            background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(255,255,255,0.1)',
-            borderRadius: '0.625rem', color: '#f8fafc', fontSize: '0.9rem',
-            outline: 'none', boxSizing: 'border-box'
+            width: '100%', padding: '0.875rem 1.25rem',
+            background: '#f8fafc', border: '1px solid #e2e8f0',
+            borderRadius: '1rem', color: '#0f172a', fontSize: '0.9rem',
+            fontWeight: '500', outline: 'none', boxSizing: 'border-box'
         },
         btn: (color = '#38bdf8') => ({
             padding: '0.6rem 1.25rem', borderRadius: '0.625rem', border: 'none',
@@ -236,8 +238,8 @@ const YoutubePlaylistImport = ({ courses, modules, onImportComplete, onClose }) 
                             <Youtube size={20} color="#f87171" />
                         </div>
                         <div>
-                            <h2 style={{ fontSize: '1.1rem', fontWeight: '900', color: '#f8fafc' }}>Import YouTube Playlist</h2>
-                            <p style={{ fontSize: '0.72rem', color: '#64748b' }}>Bulk-import videos from your private or public YouTube playlists</p>
+                            <h2 style={{ fontSize: '1.5rem', fontWeight: '900', color: '#0f172a', letterSpacing: '-0.025em' }}>Import YouTube Playlist</h2>
+                            <p style={{ fontSize: '0.875rem', color: '#64748b', fontWeight: '500' }}>Bulk-import videos from your private or public YouTube playlists</p>
                         </div>
                     </div>
                     <button onClick={onClose} style={{ background: 'none', border: 'none', color: '#64748b', cursor: 'pointer', padding: '0.25rem' }}>
@@ -357,8 +359,8 @@ const YoutubePlaylistImport = ({ courses, modules, onImportComplete, onClose }) 
                                                     style={{
                                                         display: 'flex', alignItems: 'center', gap: '0.75rem',
                                                         padding: '0.6rem 0.75rem', borderRadius: '0.625rem', cursor: 'pointer',
-                                                        background: isSelected ? 'rgba(56,189,248,0.08)' : 'rgba(0,0,0,0.2)',
-                                                        border: isSelected ? '1px solid rgba(56,189,248,0.25)' : '1px solid rgba(255,255,255,0.04)',
+                                                        background: isSelected ? 'rgba(37, 99, 235, 0.05)' : '#ffffff',
+                                                        border: isSelected ? '1px solid rgba(37, 99, 235, 0.2)' : '1px solid #f1f5f9',
                                                         transition: 'all 0.15s'
                                                     }}
                                                 >

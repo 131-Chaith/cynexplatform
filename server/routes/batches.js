@@ -10,6 +10,7 @@ router.get('/', authenticateToken, authorizeRole('admin'), async (req, res) => {
         const result = await db.execute("SELECT * FROM batches ORDER BY created_at DESC");
         res.json(result.rows);
     } catch (error) {
+        console.error("Error in GET /api/batches:", error);
         res.status(500).json({ message: error.message });
     }
 });

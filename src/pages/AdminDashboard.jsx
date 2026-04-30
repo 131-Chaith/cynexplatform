@@ -1,12 +1,16 @@
 import React, { useState } from 'react';
 import { useData } from '../context/DataContext';
 import Card from '../components/Card';
-import { Users, BookOpen, Video, Award, MessageSquare, Shield, Activity, TrendingUp } from 'lucide-react';
+import { Users, BookOpen, Video, Award, MessageSquare, Shield, Activity, TrendingUp, Settings } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import ProjectApprovals from '../components/admin/ProjectApprovals';
 import ContentManagement from '../components/admin/ContentManagement';
 import AdminAssessments from '../components/admin/AdminAssessments';
 import CertificateApprovals from '../components/admin/CertificateApprovals';
+import AdminAttendance from './AttendanceDashboard';
+import AdminClasses from '../components/admin/AdminClasses';
+import AdminAnnouncements from '../components/admin/AdminAnnouncements';
+import AdminSettings from '../components/admin/AdminSettings';
 
 
 const AdminDashboard = () => {
@@ -17,19 +21,25 @@ const AdminDashboard = () => {
     const tabs = [
         { id: 'overview', label: 'Overview', icon: <Users size={18} /> },
         { id: 'content', label: 'Content Management', icon: <BookOpen size={18} /> },
+        { id: 'attendance', label: 'Attendance', icon: <Activity size={18} /> },
+        { id: 'classes', label: 'Classes', icon: <Video size={18} /> },
         { id: 'assessments', label: 'Assessments', icon: <BookOpen size={18} /> },
         { id: 'projects', label: 'Projects', icon: <BookOpen size={18} /> },
         { id: 'approvals', label: 'Certificates', icon: <Award size={18} /> },
         { id: 'announcements', label: 'Announcements', icon: <MessageSquare size={18} /> },
+        { id: 'settings', label: 'Settings & Config', icon: <Settings size={18} /> },
     ];
 
     const renderContent = () => {
         switch (activeTab) {
             case 'content': return <ContentManagement />;
+            case 'attendance': return <AdminAttendance />;
+            case 'classes': return <AdminClasses />;
             case 'assessments': return <AdminAssessments />;
             case 'projects': return <ProjectApprovals />;
             case 'approvals': return <CertificateApprovals />;
-            case 'announcements': return <div style={{ padding: '2rem', textAlign: 'center', color: 'var(--text-light)' }}>Announcements Module Coming Soon</div>;
+            case 'announcements': return <AdminAnnouncements />;
+            case 'settings': return <AdminSettings />;
             default: return (
                 <>
                     {/* Stats Grid - Holographic 3D */}

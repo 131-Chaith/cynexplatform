@@ -19,6 +19,7 @@ export const DataProvider = ({ children }) => {
     });
 
     const fetchData = useCallback(async () => {
+        if (!currentUser) return;
         try {
             // always fetch courses
             const coursesRes = await api.get('courses');
@@ -97,6 +98,17 @@ export const DataProvider = ({ children }) => {
         }
     };
 
+    const enrollCourse = async (courseId) => {
+        try {
+            await api.post('students/enroll', { course_id: courseId });
+            fetchData();
+            return true;
+        } catch (error) {
+            console.error("Failed to enroll in course", error);
+            throw error;
+        }
+    };
+
     const requestCertificate = async (studentId, courseId, videoLink) => {
         try {
             await api.post('students/certificates/request', { course_id: courseId, video_link: videoLink });
@@ -119,9 +131,9 @@ export const DataProvider = ({ children }) => {
         }
     };
 
-    const rejectCertificate = async (requestId) => {
+    const rejectCertificate = async (requestId, reason) => {
         try {
-            await api.post(`admin/certificates/reject/${requestId}`);
+            await api.post(`admin/certificates/reject/${requestId}`, { reason });
             fetchData(); // Refresh list
             return true;
         } catch (error) {
@@ -146,7 +158,7 @@ export const DataProvider = ({ children }) => {
     const logoutUser = () => { };
 
     return (
-        <DataContext.Provider value={{ data, saveData, loginUser, logoutUser, submitAssignment, submitTestResult, requestCertificate, approveCertificate, rejectCertificate, approveProject, fetchData }}>
+        <DataContext.Provider value={{ data, saveData, loginUser, logoutUser, submitAssignment, submitTestResult, requestCertificate, approveCertificate, rejectCertificate, approveProject, fetchData, enrollCourse }}>
             {children}
         </DataContext.Provider>
     );

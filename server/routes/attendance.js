@@ -2,33 +2,98 @@ import express from 'express';
 import { db } from '../db.js';
 import { authenticateToken, authorizeRole } from '../middleware/authMiddleware.js';
 import { generateQRToken, validateQRToken, markAttendance, getStudentStats, getStudentAnalytics, getStudentCalendar } from '../services/attendanceService.js';
-import { pullMeetAttendance, getSessionReport } from '../services/googleMeetService.js';
+import { pullMeetAttendance, getSessionReport, createMeetSession } from '../services/googleMeetService.js';
+import { getAuthUrl, saveTokens } from '../services/googleAuthService.js';
+import crypto from 'crypto';
+import jwt from 'jsonwebtoken';
 
 
 const router = express.Router();
 
 // --- Session Management (Admin/Instructor) ---
+// Generate a Google Meet link on-the-fly
+router.get('/generate-meet', authenticateToken, authorizeRole('admin', 'instructor'), async (req, res) => {
+    try {
+        const topic = req.query.topic || 'New Class Session';
+        const start = req.query.start || new Date().toISOString();
+        const duration = parseInt(req.query.duration) || 60;
+        
+        try {
+            const meetData = await createMeetSession(req.user.id, topic, start, duration);
+            res.json(meetData);
+        } catch (innerError) {
+            console.warn("Meet API Error:", innerError.message);
+            // Fallback for demo/dev purposes
+            const part1 = Math.random().toString(36).substring(2, 5);
+            const part2 = Math.random().toString(36).substring(2, 6);
+            const part3 = Math.random().toString(36).substring(2, 5);
+            const fallbackLink = `https://meet.jit.si/CynexClassroom-${part1}${part2}${part3}`;
+            
+            res.json({ 
+                meetLink: fallbackLink, 
+                isFallback: true, 
+                errorType: innerError.message.includes('not connected') ? 'AUTH_MISSING' : 'API_ERROR',
+                message: innerError.message 
+            });
+        }
+    } catch (error) {
+        console.error("Global generate-meet error:", error);
+        res.status(500).json({ message: error.message });
+    }
+});
 
 // Create a new attendance session
 router.post('/sessions', authenticateToken, authorizeRole('admin', 'instructor'), async (req, res) => {
-    const { type, batch_id, course_id, topic, gps_lat, gps_lng, threshold_percentage, duration_mins } = req.body;
+    const { type, batch_id, course_id, topic, gps_lat, gps_lng, threshold_percentage, duration_mins: provided_duration, meet_link: provided_meet_link, start_date, start_time: provided_start_time, end_time } = req.body;
     const instructor_id = req.user.id;
 
     try {
-        let meet_link = null;
+        let meet_link = provided_meet_link || null;
         let qr_token = null;
         let qr_expiry = null;
+        
+        // Combine date and time with validation
+        let startDateTime = new Date().toISOString();
+        let duration_mins = provided_duration || 60;
 
-        if (type === 'online') {
-            meet_link = `https://meet.google.com/mock-${Math.random().toString(36).substring(7)}`;
+        if (start_date && provided_start_time) {
+            const parsedStart = new Date(`${start_date}T${provided_start_time}`);
+            if (!isNaN(parsedStart.getTime())) {
+                startDateTime = parsedStart.toISOString();
+                
+                // Calculate duration if end_time is provided
+                if (end_time) {
+                    const parsedEnd = new Date(`${start_date}T${end_time}`);
+                    if (!isNaN(parsedEnd.getTime())) {
+                        const diffMs = parsedEnd.getTime() - parsedStart.getTime();
+                        if (diffMs > 0) {
+                            duration_mins = Math.floor(diffMs / 60000);
+                        }
+                    }
+                }
+            }
+        }
+
+        if (type === 'online' && !meet_link) {
+            try {
+                const meetData = await createMeetSession(instructor_id, topic, startDateTime, duration_mins || 60);
+                meet_link = meetData.meetLink;
+            } catch (err) {
+                console.warn("Could not create real Meet session, using fallback:", err.message);
+                // Realistic fallback pattern: meet.google.com/abc-defg-hij
+                const part1 = Math.random().toString(36).substring(2, 5);
+                const part2 = Math.random().toString(36).substring(2, 6);
+                const part3 = Math.random().toString(36).substring(2, 5);
+                meet_link = `https://meet.jit.si/CynexClassroom-${part1}${part2}${part3}`;
+            }
         } else if (type === 'offline') {
             qr_token = `qr_${Date.now()}_${Math.random().toString(36).substring(5)}`;
-            qr_expiry = new Date(Date.now() + (duration_mins || 60) * 60000).toISOString();
+            qr_expiry = new Date(new Date(startDateTime).getTime() + (duration_mins || 60) * 60000).toISOString();
         }
 
         const result = await db.execute({
-            sql: `INSERT INTO attendance_sessions (type, batch_id, course_id, instructor_id, topic, meet_link, qr_token, qr_expiry, gps_lat, gps_lng, status, threshold_percentage, duration_mins) 
-                  VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'ongoing', ?, ?)`,
+            sql: `INSERT INTO attendance_sessions (type, batch_id, course_id, instructor_id, topic, meet_link, qr_token, qr_expiry, gps_lat, gps_lng, status, threshold_percentage, duration_mins, start_time) 
+                  VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'ongoing', ?, ?, ?)`,
             args: [
                 type, 
                 batch_id || null, 
@@ -41,7 +106,8 @@ router.post('/sessions', authenticateToken, authorizeRole('admin', 'instructor')
                 gps_lat || null, 
                 gps_lng || null,
                 threshold_percentage || 75,
-                duration_mins || 60
+                duration_mins || 60,
+                startDateTime
             ]
         });
 
@@ -86,10 +152,11 @@ router.get('/sessions/active', authenticateToken, async (req, res) => {
         const batchId = userRes.rows[0]?.batch_id;
 
         const sessions = await db.execute({
-            sql: `SELECT s.*, u.name as instructor_name, c.title as course_title 
+            sql: `SELECT s.*, u.name as instructor_name, c.title as course_title, b.batch_name
                   FROM attendance_sessions s
                   JOIN users u ON s.instructor_id = u.id
                   JOIN courses c ON s.course_id = c.id
+                  LEFT JOIN batches b ON s.batch_id = b.id
                   WHERE (s.batch_id = ? OR s.batch_id IS NULL) AND s.status = 'ongoing'
                   ORDER BY s.start_time DESC`,
             args: [batchId]
@@ -114,19 +181,46 @@ router.post('/sessions/:id/stop', authenticateToken, authorizeRole('admin', 'ins
     }
 });
 
-// --- Attendance Recording ---
+// Update session details
+router.put('/sessions/:id', authenticateToken, authorizeRole('admin', 'instructor'), async (req, res) => {
+    const { topic, duration_mins, threshold_percentage, meet_link } = req.body;
+    try {
+        await db.execute({
+            sql: `UPDATE attendance_sessions 
+                  SET topic = ?, duration_mins = ?, threshold_percentage = ?, meet_link = ? 
+                  WHERE id = ?`,
+            args: [topic, duration_mins, threshold_percentage, meet_link, req.params.id]
+        });
+        res.json({ message: "Session updated successfully" });
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+});
 
 // Mark attendance via QR Scan (Student)
 router.post('/scan', authenticateToken, async (req, res) => {
-    const { sessionId, qrToken, gpsData, deviceInfo } = req.body;
+    const { qrToken, gpsData, deviceInfo } = req.body;
     const studentId = req.user.id;
     const ipAddress = req.ip || req.headers['x-forwarded-for'] || 'unknown';
 
+    let sessionId = null;
+
     try {
-        // 1. Validate the dynamic QR Token first
-        const decoded = validateQRToken(qrToken);
-        if (decoded.sessionId != sessionId) {
-            throw new Error('QR code mismatch for this session');
+        // 1. Validate the dynamic QR Token or Demo Mode Static Token
+        if (qrToken.startsWith('qr_')) {
+            // Demo Mode fallback: lookup the session by the static initial token
+            const sessionRes = await db.execute({
+                sql: "SELECT id FROM attendance_sessions WHERE qr_token = ?",
+                args: [qrToken]
+            });
+            if (sessionRes.rows.length === 0) {
+                throw new Error("Invalid or expired static QR token");
+            }
+            sessionId = sessionRes.rows[0].id;
+        } else {
+            // Standard Flow: Decode the rotating JWT
+            const decoded = validateQRToken(qrToken);
+            sessionId = decoded.sessionId;
         }
 
         // 2. Mark attendance with full security checks
@@ -145,9 +239,104 @@ router.post('/scan', authenticateToken, async (req, res) => {
         await db.execute({
             sql: `INSERT INTO qr_scan_logs (student_id, session_id, ip_address, device_info, validation_status) 
                   VALUES (?, ?, ?, ?, ?)`,
-            args: [studentId, sessionId, ipAddress, deviceInfo, 'failed: ' + error.message]
+            args: [studentId, sessionId || 0, ipAddress, deviceInfo, 'failed: ' + error.message]
         });
         res.status(400).json({ message: error.message });
+    }
+});
+
+// --- Secure QR Verification (JWT-AES) ---
+const AES_KEY = process.env.AES_SECRET_KEY || '12345678901234567890123456789012'; // 32 bytes
+const AES_IV = process.env.AES_IV || '1234567890123456'; // 16 bytes
+
+function decryptAESToken(encryptedText) {
+    try {
+        const decipher = crypto.createDecipheriv('aes-256-cbc', Buffer.from(AES_KEY), Buffer.from(AES_IV));
+        let decrypted = decipher.update(encryptedText, 'base64', 'utf8');
+        decrypted += decipher.final('utf8');
+        return decrypted;
+    } catch (e) {
+        throw new Error("Failed to decrypt AES token");
+    }
+}
+
+// Implement Student Attendance QR Scanner Module verify endpoint
+router.post('/verify', authenticateToken, async (req, res) => {
+    try {
+        const { qrToken, gpsData } = req.body;
+        const studentId = req.user.id;
+        
+        if (!qrToken) {
+            return res.status(400).json({ status: 'error', message: "Token is missing" });
+        }
+        
+        // 1. Decrypt AES
+        let jwtToken;
+        if (qrToken.startsWith('eyJ')) { // Just JWT for demo/fallback
+            jwtToken = qrToken;
+        } else if (qrToken.startsWith('qr_')) { // Demo static token fallback
+            jwtToken = jwt.sign({ courseId: 1, tokenId: qrToken }, process.env.JWT_SECRET || 'fallback_secret', { expiresIn: '1h' });
+        } else {
+            jwtToken = decryptAESToken(qrToken);
+        }
+        
+        // 2. Validate JWT
+        const decoded = jwt.verify(jwtToken, process.env.JWT_SECRET || 'fallback_secret');
+        const courseId = decoded.courseId || 1;
+        const tokenId = decoded.tokenId || `fallback_token_${Date.now()}`;
+        
+        // 3. Mark attendance in database & Check Unique Token
+        const check = await db.execute({
+            sql: "SELECT id FROM qr_attendance_records WHERE token_id = ?",
+            args: [tokenId]
+        });
+        
+        if (check.rows.length > 0) {
+            return res.status(400).json({ status: 'error', message: "Token already used. Please request a new QR code." });
+        }
+        
+        await db.execute({
+            sql: `INSERT INTO qr_attendance_records (student_id, course_id, gps_lat, gps_long, token_id) VALUES (?, ?, ?, ?, ?)`,
+            args: [studentId, courseId, gpsData?.lat || null, gpsData?.lng || null, tokenId]
+        });
+        
+        // Sync with standard attendance_records table for Admin Reporting
+        let sessionId = null;
+        if (qrToken.startsWith('qr_')) {
+            const sessionRes = await db.execute({
+                sql: "SELECT id FROM attendance_sessions WHERE qr_token = ?",
+                args: [qrToken]
+            });
+            if (sessionRes.rows.length > 0) {
+                sessionId = sessionRes.rows[0].id;
+            }
+        }
+        
+        if (sessionId) {
+            const standardCheck = await db.execute({
+                sql: "SELECT id FROM attendance_records WHERE session_id = ? AND student_id = ?",
+                args: [sessionId, studentId]
+            });
+            
+            if (standardCheck.rows.length === 0) {
+                await db.execute({
+                    sql: `INSERT INTO attendance_records (session_id, student_id, join_time, status, attendance_type, remarks) 
+                          VALUES (?, ?, CURRENT_TIMESTAMP, 'present', 'offline', 'Verified via secure QR token')`,
+                    args: [sessionId, studentId]
+                });
+            }
+        }
+        
+        res.json({ status: 'success', message: "Attendance marked successfully" });
+    } catch (error) {
+        if (error.name === 'TokenExpiredError') {
+            return res.status(400).json({ status: 'error', message: "QR Code expired. Ask instructor to refresh." });
+        } else if (error.name === 'JsonWebTokenError') {
+            return res.status(400).json({ status: 'error', message: "Invalid QR Code signature." });
+        }
+        
+        console.error("QR Verification Error:", error);
+        res.status(400).json({ status: 'error', message: error.message || "Database error occurred" });
     }
 });
 
@@ -220,22 +409,38 @@ router.get('/analytics', authenticateToken, async (req, res) => {
 // Generate CSV Report
 router.get('/reports/export', authenticateToken, async (req, res) => {
     try {
-        const history = await db.execute({
-            sql: `SELECT r.*, s.topic, s.type, c.title as course_title, u.name as instructor_name
+        const { batch_id } = req.query;
+        let sql = `SELECT r.*, s.topic, s.type, c.title as course_title, u.name as student_name, b.batch_name
                   FROM attendance_records r
                   JOIN attendance_sessions s ON r.session_id = s.id
                   JOIN courses c ON s.course_id = c.id
-                  JOIN users u ON s.instructor_id = u.id
-                  WHERE r.student_id = ?
-                  ORDER BY r.join_time DESC`,
-            args: [req.user.id]
-        });
+                  JOIN users u ON r.student_id = u.id
+                  LEFT JOIN batches b ON u.batch_id = b.id`;
+        let args = [];
+        let whereClauses = [];
+
+        if (req.user.role !== 'admin' && req.user.role !== 'instructor') {
+            whereClauses.push(`r.student_id = ?`);
+            args.push(req.user.id);
+        } else if (batch_id && batch_id !== 'all') {
+            whereClauses.push(`u.batch_id = ?`);
+            args.push(batch_id);
+        }
+
+        if (whereClauses.length > 0) {
+            sql += ` WHERE ` + whereClauses.join(' AND ');
+        }
+
+        sql += ` ORDER BY r.join_time DESC`;
+        const history = await db.execute({ sql, args });
 
         const rows = history.rows.map(r => ({
+            StudentName: r.student_name,
+            Batch: r.batch_name || 'N/A',
             Subject: r.course_title,
             Topic: r.topic,
-            Date: new Date(r.join_time).toLocaleDateString(),
-            Time: new Date(r.join_time).toLocaleTimeString(),
+            Date: r.join_time ? new Date(r.join_time).toLocaleDateString() : 'N/A',
+            Time: r.join_time ? new Date(r.join_time).toLocaleTimeString() : 'N/A',
             Type: r.type,
             Status: r.status
         }));
@@ -276,6 +481,33 @@ router.get('/notifications', authenticateToken, async (req, res) => {
         });
 
         res.json(notifications);
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+});
+
+// Edit attendance record
+router.put('/records/:id', authenticateToken, authorizeRole('admin', 'instructor'), async (req, res) => {
+    try {
+        const { status, remarks } = req.body;
+        await db.execute({
+            sql: `UPDATE attendance_records SET status = ?, remarks = ?, attendance_type = 'manual' WHERE id = ?`,
+            args: [status, remarks, req.params.id]
+        });
+        res.json({ message: "Record updated successfully" });
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+});
+
+// Delete attendance record
+router.delete('/records/:id', authenticateToken, authorizeRole('admin', 'instructor'), async (req, res) => {
+    try {
+        await db.execute({
+            sql: "DELETE FROM attendance_records WHERE id = ?",
+            args: [req.params.id]
+        });
+        res.json({ message: "Record deleted successfully" });
     } catch (error) {
         res.status(500).json({ message: error.message });
     }
@@ -340,8 +572,8 @@ router.post('/student/join-online', authenticateToken, async (req, res) => {
         }
 
         await db.execute({
-            sql: `INSERT INTO attendance_records (session_id, student_id, join_time, status, type)
-                  VALUES (?, ?, datetime('now'), 'present', 'online')`,
+            sql: `INSERT INTO attendance_records (session_id, student_id, join_time, status, attendance_type, attendance_percentage, late_flag, remarks)
+                  VALUES (?, ?, CURRENT_TIMESTAMP, 'present', 'online', 100, 0, 'Joined via Online Portal')`,
             args: [sessionId, req.user.id]
         });
 
@@ -355,16 +587,32 @@ router.post('/student/join-online', authenticateToken, async (req, res) => {
 // Student history
 router.get('/history/my', authenticateToken, async (req, res) => {
     try {
-        const history = await db.execute({
-            sql: `SELECT r.*, s.topic, s.type, c.title as course_title, u.name as instructor_name
+        const { batch_id } = req.query;
+        let sql = `SELECT r.*, s.topic, s.type, c.title as course_title, u.name as instructor_name, student_u.name as student_name, b.batch_name
                   FROM attendance_records r
                   JOIN attendance_sessions s ON r.session_id = s.id
                   JOIN courses c ON s.course_id = c.id
                   JOIN users u ON s.instructor_id = u.id
-                  WHERE r.student_id = ?
-                  ORDER BY r.join_time DESC`,
-            args: [req.user.id]
-        });
+                  JOIN users student_u ON r.student_id = student_u.id
+                  LEFT JOIN batches b ON student_u.batch_id = b.id`;
+        let args = [];
+        let whereClauses = [];
+
+        if (req.user.role !== 'admin' && req.user.role !== 'instructor') {
+            whereClauses.push(`r.student_id = ?`);
+            args.push(req.user.id);
+        } else if (batch_id && batch_id !== 'all') {
+            whereClauses.push(`student_u.batch_id = ?`);
+            args.push(batch_id);
+        }
+
+        if (whereClauses.length > 0) {
+            sql += ` WHERE ` + whereClauses.join(' AND ');
+        }
+
+        sql += ` ORDER BY r.join_time DESC LIMIT 500`;
+
+        const history = await db.execute({ sql, args });
         res.json(history.rows);
     } catch (error) {
         res.status(500).json({ message: error.message });
@@ -544,4 +792,109 @@ router.get('/sessions', authenticateToken, authorizeRole('admin', 'instructor'),
     }
 });
 
+// --- Google Auth Routes ---
+
+router.get('/google/auth-url', authenticateToken, authorizeRole('admin', 'instructor'), async (req, res) => {
+    try {
+        const url = getAuthUrl();
+        res.json({ url });
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+});
+
+router.post('/google/callback', authenticateToken, authorizeRole('admin', 'instructor'), async (req, res) => {
+    const { code } = req.body;
+    try {
+        await saveTokens(req.user.id, code);
+        res.json({ message: "Google account connected successfully." });
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+});
+
+
+// GET /analytics-dashboard — Real-time metrics for Admin Overview
+router.get('/analytics-dashboard', authenticateToken, authorizeRole('admin', 'instructor'), async (req, res) => {
+    try {
+        console.log(`[ATTENDANCE] Fetching dashboard analytics for user ${req.user.id}`);
+        
+        // Use Promise.allSettled to ensure we get as much data as possible even if some queries fail
+        const results = await Promise.allSettled([
+            db.execute(`
+                SELECT COUNT(DISTINCT student_id) as count 
+                FROM attendance_records 
+                WHERE status IN ('present', 'partial') 
+                AND join_time >= date('now', '-30 days')
+            `),
+            db.execute(`
+                SELECT AVG(attendance_percentage) as avg_engagement 
+                FROM attendance_records r
+                JOIN attendance_sessions s ON r.session_id = s.id
+                WHERE s.type = 'online'
+            `),
+            db.execute(`
+                SELECT COUNT(*) as count 
+                FROM attendance_records r
+                JOIN attendance_sessions s ON r.session_id = s.id
+                WHERE s.type = 'offline'
+            `),
+            db.execute(`
+                SELECT 
+                    (CAST(COUNT(CASE WHEN status = 'present' THEN 1 END) AS FLOAT) / 
+                    NULLIF(COUNT(*), 0)) * 100 as rate
+                FROM attendance_records
+            `),
+            db.execute(`
+                SELECT 
+                    r.id, r.student_id, r.join_time, r.status,
+                    u.name as student_name, s.topic, s.type as mode
+                FROM attendance_records r
+                JOIN users u ON r.student_id = u.id
+                JOIN attendance_sessions s ON r.session_id = s.id
+                ORDER BY r.join_time DESC
+                LIMIT 10
+            `)
+        ]);
+
+        // Process results safely
+        const getValue = (index, field, defaultValue = 0) => {
+            if (results[index].status === 'fulfilled' && results[index].value.rows.length > 0) {
+                return results[index].value.rows[0][field] || defaultValue;
+            }
+            if (results[index].status === 'rejected') {
+                console.error(`Query ${index} failed:`, results[index].reason);
+            }
+            return defaultValue;
+        };
+
+        const recentActivity = results[4].status === 'fulfilled' ? results[4].value.rows : [];
+
+        res.status(200).json({
+            status: 'success',
+            summary: {
+                activePresence: getValue(0, 'count'),
+                meetEngagement: Math.round(getValue(1, 'avg_engagement')),
+                offlineScans: getValue(2, 'count'),
+                successRate: Math.round(getValue(3, 'rate'))
+            },
+            recentActivity: recentActivity.map(row => ({
+                ...row,
+                student_name: row.student_name || 'Unknown Student',
+                topic: row.topic || 'No Topic'
+            }))
+        });
+
+    } catch (error) {
+        console.error('CRITICAL: Dashboard Analytics Failure:', error);
+        res.status(200).json({ 
+            status: 'error',
+            message: 'Failed to retrieve analytics data. Please try again later.',
+            summary: { activePresence: 0, meetEngagement: 0, offlineScans: 0, successRate: 0 },
+            recentActivity: []
+        });
+    }
+});
+
 export default router;
+

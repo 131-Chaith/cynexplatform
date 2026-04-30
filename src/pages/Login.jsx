@@ -2,8 +2,8 @@ import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useData } from '../context/DataContext';
-import { LogIn, GraduationCap, ArrowRight, Mail, Lock, Sparkles } from 'lucide-react';
-import { motion } from 'framer-motion';
+import { LogIn, GraduationCap, ArrowRight, Mail, Lock, Sparkles, CheckCircle2 } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
 import Button from '../components/Button';
 import Input from '../components/Input';
 
@@ -12,6 +12,8 @@ const Login = () => {
     const [password, setPassword] = useState('');
     const [error, setError] = useState('');
     const [loading, setLoading] = useState(false);
+
+    const [showSuccessToast, setShowSuccessToast] = useState(false);
 
     const { login } = useAuth();
     const navigate = useNavigate();
@@ -24,8 +26,11 @@ const Login = () => {
         try {
             const result = await login(email, password);
             if (result.success) {
+                setShowSuccessToast(true);
                 const user = JSON.parse(localStorage.getItem('user'));
-                navigate(user.role === 'admin' ? '/admin' : '/student');
+                setTimeout(() => {
+                    navigate(user.role === 'admin' ? '/admin' : '/student');
+                }, 1500);
             } else {
                 setError(result.message);
             }
@@ -130,7 +135,7 @@ const Login = () => {
                                 <motion.button
                                     whileHover={{ scale: 1.05 }}
                                     type="button"
-                                    onClick={() => { setEmail('admin@gmail.com'); setPassword('admin123'); }}
+                                    onClick={() => { setEmail('admin@cynex.ai'); setPassword('admin123'); }}
                                     style={{ fontSize: '0.75rem', color: 'var(--primary)', background: 'rgba(37, 99, 235, 0.05)', border: 'none', padding: '0.4rem 0.8rem', borderRadius: '0.5rem', cursor: 'pointer', fontWeight: '600' }}
                                 >
                                     Admin Demo
@@ -138,7 +143,7 @@ const Login = () => {
                                 <motion.button
                                     whileHover={{ scale: 1.05 }}
                                     type="button"
-                                    onClick={() => { setEmail('student@gmail.com'); setPassword('student123'); }}
+                                    onClick={() => { setEmail('student@cynex.ai'); setPassword('student123'); }}
                                     style={{ fontSize: '0.75rem', color: 'var(--secondary)', background: 'rgba(16, 185, 129, 0.05)', border: 'none', padding: '0.4rem 0.8rem', borderRadius: '0.5rem', cursor: 'pointer', fontWeight: '600' }}
                                 >
                                     Student Demo
@@ -241,6 +246,38 @@ const Login = () => {
                     }}
                 ></motion.div>
             </motion.div>
+
+            <AnimatePresence>
+                {showSuccessToast && (
+                    <motion.div
+                        initial={{ opacity: 0, y: 50, scale: 0.9 }}
+                        animate={{ opacity: 1, y: 0, scale: 1 }}
+                        exit={{ opacity: 0, scale: 0.9, transition: { duration: 0.2 } }}
+                        style={{
+                            position: 'fixed',
+                            bottom: '2rem',
+                            left: '50%',
+                            transform: 'translateX(-50%)',
+                            background: '#10B981',
+                            color: 'white',
+                            padding: '1rem 2rem',
+                            borderRadius: '1rem',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '1rem',
+                            boxShadow: '0 20px 25px -5px rgba(16, 185, 129, 0.4)',
+                            zIndex: 1000,
+                            fontWeight: '700'
+                        }}
+                    >
+                        <CheckCircle2 size={24} />
+                        <div>
+                            <div style={{ fontSize: '1rem' }}>Success Authenticated</div>
+                            <div style={{ fontSize: '0.8rem', opacity: 0.9 }}>Redirecting to your dashboard...</div>
+                        </div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
         </div>
     );
 };

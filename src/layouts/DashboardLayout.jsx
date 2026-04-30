@@ -41,8 +41,16 @@ const DashboardLayout = () => {
     const allAdminItems = [
         { icon: <LayoutDashboard size={20} />, label: 'Dashboard', path: '/admin', roles: ['admin', 'super_admin'] },
         { icon: <Users size={20} />, label: 'Students', path: '/admin/students', roles: ['admin', 'super_admin'] },
-        { icon: <Users size={20} />, label: 'Batches', path: '/admin/batches', roles: ['admin', 'super_admin'] },
-        { icon: <BookOpen size={20} />, label: 'Courses', path: '/admin/courses', roles: ['admin', 'super_admin'] },
+        { 
+            icon: <BookOpen size={20} />, 
+            label: 'Academics', 
+            roles: ['admin', 'super_admin'],
+            subItems: [
+                { label: 'Courses', path: '/admin/courses' },
+                { label: 'Batches', path: '/admin/batches' },
+                { label: 'Attendance', path: '/admin/attendance' }
+            ]
+        },
         { icon: <Layers size={20} />, label: 'Modules', path: '/admin/modules', roles: ['admin', 'super_admin'] },
         { icon: <Video size={20} />, label: 'Videos', path: '/admin/videos', roles: ['admin', 'super_admin'] },
         { 
@@ -52,10 +60,11 @@ const DashboardLayout = () => {
             roles: ['admin', 'super_admin']
         },
         { icon: <FileText size={20} />, label: 'Certificates', path: '/admin/certificates', roles: ['admin', 'super_admin'] },
-        { icon: <MessageSquare size={20} />, label: 'Announcements', path: '/admin/announcements', roles: ['super_admin'] },
-        { icon: <Settings size={20} />, label: 'Settings', path: '/admin/settings', roles: ['super_admin'] },
-        { icon: <FileText size={20} />, label: 'Projects', path: '/admin/projects', roles: ['super_admin'] },
-        { icon: <FileText size={20} />, label: 'Assessments', path: '/admin/assessments', roles: ['super_admin'] },
+        { icon: <MessageSquare size={20} />, label: 'Announcements', path: '/admin/announcements', roles: ['admin', 'super_admin'] },
+        { icon: <Settings size={20} />, label: 'Settings', path: '/admin/settings', roles: ['admin', 'super_admin'] },
+        { icon: <FileText size={20} />, label: 'Projects', path: '/admin/projects', roles: ['admin', 'super_admin'] },
+        { icon: <FileText size={20} />, label: 'Assessments', path: '/admin/assessments', roles: ['admin', 'super_admin'] },
+        { icon: <Video size={20} />, label: 'Classes', path: '/admin/classes', roles: ['admin', 'super_admin'] },
     ];
 
     const studentItems = [
@@ -69,6 +78,7 @@ const DashboardLayout = () => {
             label: 'Attendance', 
             path: '/student/attendance'
         },
+        { icon: <MessageSquare size={20} />, label: 'Announcements', path: '/student/announcements' },
         { icon: <GraduationCap size={20} />, label: 'Certificates', path: '/student/certificates' },
         { icon: <Users size={20} />, label: 'Profile', path: '/student/profile' },
     ];
@@ -79,7 +89,7 @@ const DashboardLayout = () => {
     }) : studentItems;
 
     return (
-        <div style={{ display: 'flex', minHeight: '100vh', backgroundColor: '#F8FAFC' }}>
+        <div style={{ display: 'flex', minHeight: '100vh', width: '100%', backgroundColor: '#F8FAFC' }}>
             {/* Sidebar */}
             <motion.aside 
                 initial={false}
@@ -120,7 +130,7 @@ const DashboardLayout = () => {
                         const [isOpen, setIsOpen] = useState(isActive);
 
                         return (
-                            <div key={item.path}>
+                            <div key={item.label}>
                                 <motion.button
                                     whileHover={{ x: 5 }}
                                     whileTap={{ scale: 0.98 }}
@@ -239,6 +249,7 @@ const DashboardLayout = () => {
                 transition: 'margin-left 0.3s ease',
                 backgroundColor: '#F8FAFC',
                 minHeight: '100vh',
+                width: `calc(100% - ${sidebarOpen ? '280px' : '80px'})`,
                 display: 'flex',
                 flexDirection: 'column'
             }}>
@@ -276,7 +287,11 @@ const DashboardLayout = () => {
                     </div>
 
                     <div style={{ display: 'flex', alignItems: 'center', gap: '1.5rem' }}>
-                        <motion.button whileHover={{ y: -2 }} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#64748B', position: 'relative' }}>
+                        <motion.button 
+                            whileHover={{ y: -2 }} 
+                            onClick={() => navigate(isAdmin ? '/admin/announcements' : '/student/announcements')}
+                            style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#64748B', position: 'relative' }}
+                        >
                             <Bell size={20} />
                             <span style={{ position: 'absolute', top: '-2px', right: '-2px', width: '8px', height: '8px', backgroundColor: '#EF4444', borderRadius: '50%', border: '2px solid white' }}></span>
                         </motion.button>
@@ -329,7 +344,7 @@ const DashboardLayout = () => {
                     </div>
                 </header>
 
-                <div style={{ padding: '2rem', flex: 1 }}>
+                <div style={{ padding: '2rem', flex: 1, width: '100%', boxSizing: 'border-box' }}>
                     <AnimatePresence mode="wait">
                         <motion.div
                             key={location.pathname}
@@ -337,6 +352,7 @@ const DashboardLayout = () => {
                             animate={{ opacity: 1, y: 0 }}
                             exit={{ opacity: 0, y: -10 }}
                             transition={{ duration: 0.3 }}
+                            style={{ width: '100%' }}
                         >
                             <Outlet />
                         </motion.div>

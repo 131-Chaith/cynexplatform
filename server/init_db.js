@@ -155,6 +155,8 @@ const initDb = async () => {
                 gps_lat REAL,
                 gps_lng REAL,
                 status TEXT CHECK(status IN ('ongoing', 'completed', 'cancelled')) DEFAULT 'ongoing',
+                threshold_percentage INTEGER DEFAULT 75,
+                duration_mins INTEGER DEFAULT 60,
                 FOREIGN KEY(batch_id) REFERENCES batches(id),
                 FOREIGN KEY(course_id) REFERENCES courses(id),
                 FOREIGN KEY(instructor_id) REFERENCES users(id)

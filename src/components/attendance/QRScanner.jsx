@@ -1,15 +1,17 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { QrCode, ShieldCheck, AlertCircle, RefreshCw, MapPin, X } from 'lucide-react';
-import { Scanner } from '@yudiel/react-qr-scanner';
+import { Html5QrcodeScanner } from 'html5-qrcode';
+import { QRCodeSVG } from 'qrcode.react';
 import api from '../../services/api';
 
-const QRScanner = ({ onClose, onSuccess }) => {
+const QRScanner = ({ session, onClose, onSuccess }) => {
     const [loading, setLoading] = useState(false);
     const [status, setStatus] = useState('idle'); // idle | scanning | success | error
     const [message, setMessage] = useState('');
     const [gpsData, setGpsData] = useState(null);
     const [gpsLoading, setGpsLoading] = useState(true);
+    const scannerRef = React.useRef(null);
 
     useEffect(() => {
         // Automatically request GPS on mount for speed
@@ -28,44 +30,74 @@ const QRScanner = ({ onClose, onSuccess }) => {
         } else {
             setGpsLoading(false);
         }
-    }, []);
 
-    const handleScan = async (result) => {
-        if (!result || loading || status === 'success') return;
+        // Initialize HTML5 QR Code Scanner
+        if (status === 'idle') {
+            // Add a small delay to ensure DOM is ready and avoid strict mode double init collision
+            const initTimeout = setTimeout(() => {
+                if (!document.getElementById("qr-reader")) return;
+                
+                try {
+                    const scanner = new Html5QrcodeScanner(
+                        "qr-reader",
+                        { fps: 10, qrbox: { width: 250, height: 250 }, aspectRatio: 1 },
+                        /* verbose= */ false
+                    );
+                    scannerRef.current = scanner;
+                    
+                    scanner.render(
+                        (decodedText) => {
+                            if (scannerRef.current) {
+                                scannerRef.current.clear().catch(e => console.log(e));
+                                scannerRef.current = null;
+                            }
+                            handleScan(decodedText);
+                        },
+                        () => {} // ignore errors
+                    );
+                } catch (err) {
+                    console.log("Scanner init error:", err);
+                }
+            }, 300);
+
+            return () => {
+                clearTimeout(initTimeout);
+                if (scannerRef.current) {
+                    scannerRef.current.clear().catch(e => console.log(e));
+                    scannerRef.current = null;
+                }
+            };
+        }
+    }, [status]);
+
+    const handleScan = async (qrText) => {
+        if (!qrText || loading || status === 'success') return;
 
         try {
             setLoading(true);
             setStatus('scanning');
             setMessage('Verifying with security engine...');
 
-            // Get active session for the student first (to know which sessionId to scan for)
-            const activeRes = await api.get('attendance/sessions/active');
-            const session = activeRes.data?.[0]; // Assume scanning for the first active session found
-
-            if (!session) {
-                throw new Error("No active attendance sessions found for your batch.");
-            }
-
-            if (session.type !== 'offline') {
-                throw new Error("No active QR/offline sessions. Ask your instructor to start an offline class.");
-            }
-
-            // Perform Secure Scan
+            // Perform Secure Scan with JWT-AES validation
             const payload = {
-                sessionId: session.id,
-                qrToken: result[0].rawValue, // Yudiel scanner returns array of results
+                qrToken: qrText, 
                 gpsData: gpsData,
                 deviceInfo: `${navigator.platform} - ${navigator.userAgent.substring(0, 80)}`
             };
 
-            await api.post('attendance/scan', payload);
+            const response = await api.post('attendance/verify', payload);
 
-            setStatus('success');
-            setMessage('Attendance verified and recorded successfully!');
-            setTimeout(() => {
-                if (onSuccess) onSuccess();
-                if (onClose) onClose();
-            }, 2500);
+            if (response.data.status === 'success') {
+                setStatus('success');
+                setMessage(response.data.message || 'Attendance verified and recorded successfully!');
+                setTimeout(() => {
+                    if (onSuccess) onSuccess();
+                    if (onClose) onClose();
+                }, 2500);
+            } else {
+                setStatus('error');
+                setMessage(response.data.message || 'Verification failed.');
+            }
 
         } catch (error) {
             setStatus('error');
@@ -88,30 +120,38 @@ const QRScanner = ({ onClose, onSuccess }) => {
                     <motion.div key="scanner" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
                         {/* Security Badge */}
                         <div style={{
-                            display: 'inline-flex', alignItems: 'center', gap: '0.5rem',
+                            display: 'inline-flex', alignItems: 'center', gap: '0.4rem',
                             background: 'linear-gradient(135deg, #EEF2FF, #F0FDF4)',
-                            border: '1px solid #C7D2FE', borderRadius: '12px',
-                            padding: '0.5rem 1rem', marginBottom: '1.25rem', fontSize: '0.75rem', fontWeight: '800', color: '#4338CA'
+                            border: '1px solid #C7D2FE', borderRadius: '10px',
+                            padding: '0.4rem 0.75rem', marginBottom: '0.75rem', fontSize: '0.7rem', fontWeight: '800', color: '#4338CA'
                         }}>
-                            <ShieldCheck size={14} />
-                            JWT-AES Secured • One-Use Token • Anti-Replay
+                            <ShieldCheck size={12} />
+                            JWT-AES Secured • One-Use Token
                         </div>
 
-                        <div style={{ position: 'relative', overflow: 'hidden', borderRadius: '1.5rem', marginBottom: '1.25rem', background: '#F1F5F9', border: '2px solid #E2E8F0' }}>
-                            <Scanner
-                                onScan={handleScan}
-                                styles={{ container: { width: '100%', aspectRatio: '1/1' } }}
-                                components={{ audio: false, torch: true }}
-                            />
+                        {session && session.qr_token && (
+                            <div style={{ marginBottom: '1rem', background: 'white', padding: '1rem', borderRadius: '1rem', display: 'flex', flexDirection: 'column', alignItems: 'center', border: '2px dashed #6366F1' }}>
+                                <p style={{ fontSize: '0.75rem', fontWeight: '800', color: '#6366F1', marginBottom: '0.5rem', textTransform: 'uppercase' }}>Demo Mode: QR Code</p>
+                                <QRCodeSVG value={session.qr_token} size={120} />
+                                <button 
+                                    onClick={() => handleScan(session.qr_token)}
+                                    style={{ marginTop: '1rem', padding: '0.6rem 1.2rem', background: '#6366F1', color: 'white', border: 'none', borderRadius: '8px', fontWeight: '700', cursor: 'pointer', fontSize: '0.8rem', width: '100%' }}
+                                >
+                                    Auto-Scan (Simulate)
+                                </button>
+                            </div>
+                        )}
 
-                            {/* Scanning Overlay UI */}
-                            <div style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, border: '40px solid rgba(0,0,0,0.45)', pointerEvents: 'none' }}></div>
-                            <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', width: '200px', height: '200px', border: '2px solid #6366F1', borderRadius: '12px' }}>
+                        <div style={{ position: 'relative', overflow: 'hidden', borderRadius: '1.25rem', marginBottom: '0.75rem', background: '#F1F5F9', border: '2px solid #E2E8F0', minHeight: '150px' }}>
+                            <div id="qr-reader" style={{ width: '100%', border: 'none' }}></div>
+
+                            {/* Clean Scanning Overlay UI */}
+                            <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', width: '220px', height: '220px', pointerEvents: 'none', zIndex: 5 }}>
                                 {/* Corner decorations */}
-                                <div style={{ position: 'absolute', top: -2, left: -2, width: 20, height: 20, borderTop: '4px solid #6366F1', borderLeft: '4px solid #6366F1', borderRadius: '3px 0 0 0' }} />
-                                <div style={{ position: 'absolute', top: -2, right: -2, width: 20, height: 20, borderTop: '4px solid #6366F1', borderRight: '4px solid #6366F1', borderRadius: '0 3px 0 0' }} />
-                                <div style={{ position: 'absolute', bottom: -2, left: -2, width: 20, height: 20, borderBottom: '4px solid #6366F1', borderLeft: '4px solid #6366F1', borderRadius: '0 0 0 3px' }} />
-                                <div style={{ position: 'absolute', bottom: -2, right: -2, width: 20, height: 20, borderBottom: '4px solid #6366F1', borderRight: '4px solid #6366F1', borderRadius: '0 0 3px 0' }} />
+                                <div style={{ position: 'absolute', top: -2, left: -2, width: 24, height: 24, borderTop: '4px solid #6366F1', borderLeft: '4px solid #6366F1', borderRadius: '4px 0 0 0' }} />
+                                <div style={{ position: 'absolute', top: -2, right: -2, width: 24, height: 24, borderTop: '4px solid #6366F1', borderRight: '4px solid #6366F1', borderRadius: '0 4px 0 0' }} />
+                                <div style={{ position: 'absolute', bottom: -2, left: -2, width: 24, height: 24, borderBottom: '4px solid #6366F1', borderLeft: '4px solid #6366F1', borderRadius: '0 0 0 4px' }} />
+                                <div style={{ position: 'absolute', bottom: -2, right: -2, width: 24, height: 24, borderBottom: '4px solid #6366F1', borderRight: '4px solid #6366F1', borderRadius: '0 0 4px 0' }} />
                                 <motion.div
                                     animate={{ top: ['5%', '90%', '5%'] }}
                                     transition={{ duration: 2.5, repeat: Infinity, ease: 'linear' }}
@@ -128,15 +168,15 @@ const QRScanner = ({ onClose, onSuccess }) => {
                         </div>
 
                         {/* GPS Status */}
-                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.75rem', marginBottom: '0.75rem' }}>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: gpsData ? '#10B981' : gpsLoading ? '#F59E0B' : '#94A3B8', fontSize: '0.8rem', fontWeight: '700' }}>
-                                <MapPin size={14} />
-                                {gpsLoading ? 'Acquiring GPS Signal...' : gpsData ? `GPS Synchronized (${gpsData.lat.toFixed(4)}, ${gpsData.lng.toFixed(4)})` : 'GPS Unavailable (Optional)'}
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem', marginBottom: '0.5rem' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', color: gpsData ? '#10B981' : gpsLoading ? '#F59E0B' : '#94A3B8', fontSize: '0.75rem', fontWeight: '700' }}>
+                                <MapPin size={12} />
+                                {gpsLoading ? 'Acquiring GPS Signal...' : gpsData ? `GPS Sync: ${gpsData.lat.toFixed(2)}, ${gpsData.lng.toFixed(2)}` : 'GPS Optional'}
                             </div>
                         </div>
 
-                        <p style={{ fontSize: '0.8rem', color: '#94A3B8', fontWeight: '500' }}>
-                            Point your camera at the QR code displayed by your instructor
+                        <p style={{ fontSize: '0.75rem', color: '#64748B', fontWeight: '600', margin: 0 }}>
+                            Hold the instructor's QR code up to your camera to scan.
                         </p>
 
                         <style>{`@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }`}</style>

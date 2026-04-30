@@ -30,7 +30,7 @@ const AttendanceAnalytics = ({ data }) => {
                         <Award size={18} color="#6366F1" /> Subject-wise Attendance
                     </h3>
                     <div style={{ height: '260px', width: '100%' }}>
-                        <ResponsiveContainer>
+                        <ResponsiveContainer minWidth={200} minHeight={200}>
                             <BarChart data={subjectData} margin={{ top: 5, right: 10, left: -20, bottom: 5 }}>
                                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#F1F5F9" />
                                 <XAxis dataKey="subject" axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#94A3B8' }} />
@@ -56,7 +56,7 @@ const AttendanceAnalytics = ({ data }) => {
                         <TrendingUp size={18} color="#10B981" /> Monthly Attendance Trend
                     </h3>
                     <div style={{ height: '260px', width: '100%' }}>
-                        <ResponsiveContainer>
+                        <ResponsiveContainer minWidth={200} minHeight={200}>
                             <AreaChart data={monthlyData} margin={{ top: 5, right: 10, left: -20, bottom: 5 }}>
                                 <defs>
                                     <linearGradient id="colorMonth" x1="0" y1="0" x2="0" y2="1">

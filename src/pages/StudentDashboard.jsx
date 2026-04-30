@@ -9,6 +9,7 @@ import Assignments from '../components/student/Assignments';
 import MockTests from '../components/student/MockTests';
 import Certificates from '../components/student/Certificates';
 import StudentCourseView from '../components/student/StudentCourseView';
+import StudentAttendance from './StudentAttendance';
 
 // Import generated image path (simulated as we know the filename)
 const HERO_IMAGE = '/student_dashboard_hero_1775205866026.png'; // This will be resolved by Vite if in public or handled manually.
@@ -57,6 +58,7 @@ const StudentDashboard = () => {
         { id: 'overview', label: 'Overview', icon: <BookOpen size={18} /> },
         { id: 'assignments', label: 'Assignments', icon: <FileText size={18} /> },
         { id: 'tests', label: 'Mock Tests', icon: <PlayCircle size={18} /> },
+        { id: 'attendance', label: 'Attendance', icon: <Clock size={18} /> },
         { id: 'certificates', label: 'Certificates', icon: <Award size={18} /> },
     ];
 
@@ -77,6 +79,7 @@ const StudentDashboard = () => {
             case 'assignments': return <Assignments />;
             case 'tests': return <MockTests />;
             case 'certificates': return <Certificates />;
+            case 'attendance': return <StudentAttendance />;
             default: return (
                 <>
                     {/* 3D Cyber-Glass Stats Grid */}

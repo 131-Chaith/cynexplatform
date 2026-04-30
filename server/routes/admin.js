@@ -9,14 +9,22 @@ router.get('/students', authenticateToken, authorizeRole('admin'), async (req, r
     try {
         const result = await db.execute(`
             SELECT 
-                u.id, u.name, u.email, u.role, u.created_at, u.batch_id,
-                s.phone, s.dob, s.address, s.gender, s.guardian_name, s.guardian_contact, s.previous_qualification
+                u.id as id, u.name, u.email, u.role, u.created_at, u.batch_id,
+                s.phone, s.dob, s.address, s.gender, s.guardian_name, s.guardian_contact, s.previous_qualification,
+                (SELECT GROUP_CONCAT(c.title, ', ') 
+                 FROM enrollments e 
+                 JOIN courses c ON e.course_id = c.id 
+                 WHERE e.student_id = u.id) as enrolled_courses,
+                b.batch_name as batch_name
             FROM users u
             LEFT JOIN students s ON u.id = s.user_id
+            LEFT JOIN batches b ON u.batch_id = b.id
             WHERE u.role = 'student'
+            ORDER BY u.created_at DESC
         `);
         res.json(result.rows);
     } catch (error) {
+        console.error("Error in GET /admin/students:", error);
         res.status(500).json({ message: error.message });
     }
 });
@@ -191,6 +199,12 @@ router.post('/certificates/approve/:id', authenticateToken, authorizeRole('admin
             args: [request.student_id, request.course_id]
         });
 
+        // 4. Notify Student
+        await db.execute({
+            sql: "INSERT INTO notifications (user_id, title, message, type) VALUES (?, ?, ?, ?)",
+            args: [request.student_id, "Certificate Approved", "Your certificate request has been approved and issued.", "success"]
+        });
+
         res.json({ message: "Certificate Approved and Issued" });
     } catch (error) {
         res.status(500).json({ message: error.message });
@@ -200,11 +214,27 @@ router.post('/certificates/approve/:id', authenticateToken, authorizeRole('admin
 // Reject Certificate
 router.post('/certificates/reject/:id', authenticateToken, authorizeRole('admin'), async (req, res) => {
     const requestId = req.params.id;
+    const { reason } = req.body; // Expecting a reason from admin
     try {
         await db.execute({
-            sql: "UPDATE certificate_requests SET status = 'rejected' WHERE id = ?",
+            sql: "UPDATE certificate_requests SET status = 'rejected', admin_feedback = ? WHERE id = ?",
+            args: [reason || "Your video submission did not meet the requirements.", requestId]
+        });
+
+        // Fetch request details to notify student
+        const reqResult = await db.execute({
+            sql: "SELECT student_id FROM certificate_requests WHERE id = ?",
             args: [requestId]
         });
+
+        if (reqResult.rows.length > 0) {
+            const studentId = reqResult.rows[0].student_id;
+            await db.execute({
+                sql: "INSERT INTO notifications (user_id, title, message, type) VALUES (?, ?, ?, ?)",
+                args: [studentId, "Certificate Rejected", reason || "Your video submission did not meet the requirements.", "error"]
+            });
+        }
+
         res.json({ message: "Certificate Request Rejected" });
     } catch (error) {
         res.status(500).json({ message: error.message });
@@ -307,43 +337,39 @@ router.put('/students/:id', authenticateToken, authorizeRole('admin'), async (re
 router.delete('/students/:id', authenticateToken, authorizeRole('admin'), async (req, res) => {
     const userId = req.params.id;
     try {
-        // 1. Delete student profile (if exists)
+        console.log(`Starting deletion process for Operative ID: ${userId}`);
+
+        // 1. Delete Attendance Records (both tables if they exist)
         await db.execute({
-            sql: "DELETE FROM students WHERE user_id = ?",
+            sql: "DELETE FROM attendance_records WHERE student_id = ?",
+            args: [userId]
+        });
+        await db.execute({
+            sql: "DELETE FROM attendance WHERE student_id = ?",
             args: [userId]
         });
 
-        // 2. Delete attendance
-        await db.execute({
-            sql: "DELETE FROM attendance WHERE student_id IN (SELECT id FROM students WHERE user_id = ?)",
-            args: [userId]
-        });
-
-        // 3. Delete enrollments
+        // 2. Delete Course Enrollments
         await db.execute({
             sql: "DELETE FROM enrollments WHERE student_id = ?",
             args: [userId]
         });
 
-        // 4. Delete submissions
+        // 3. Delete Submissions & Test Results
         await db.execute({
             sql: "DELETE FROM submissions WHERE student_id = ?",
             args: [userId]
         });
-
-        // 5. Delete test results
         await db.execute({
             sql: "DELETE FROM test_results WHERE student_id = ?",
             args: [userId]
         });
 
-        // 6. Delete projects
+        // 4. Delete Projects & Certificates
         await db.execute({
             sql: "DELETE FROM projects WHERE student_id = ?",
             args: [userId]
         });
-
-        // 7. Delete certificate requests and certificates
         await db.execute({
             sql: "DELETE FROM certificate_requests WHERE student_id = ?",
             args: [userId]
@@ -353,22 +379,33 @@ router.delete('/students/:id', authenticateToken, authorizeRole('admin'), async 
             args: [userId]
         });
 
-        // 8. Delete activity logs
+        // 5. Delete Activity Logs & Notifications
         await db.execute({
             sql: "DELETE FROM activity_logs WHERE user_id = ?",
             args: [userId]
         });
-
-        // 9. Finally delete the user
         await db.execute({
+            sql: "DELETE FROM notifications WHERE user_id = ?",
+            args: [userId]
+        });
+
+        // 6. Delete Student Profile Extension
+        await db.execute({
+            sql: "DELETE FROM students WHERE user_id = ?",
+            args: [userId]
+        });
+
+        // 7. Finally delete the core User Identity
+        const result = await db.execute({
             sql: "DELETE FROM users WHERE id = ?",
             args: [userId]
         });
 
-        res.json({ message: "Student Deleted Successfully" });
+        console.log(`Deletion successful for Operative ID: ${userId}`);
+        res.json({ message: "Operative Terminated and Data Purged Successfully" });
     } catch (error) {
-        console.error("Delete student error:", error);
-        res.status(500).json({ message: error.message });
+        console.error("Termination Protocol Failed:", error);
+        res.status(500).json({ message: "Termination Failed: " + error.message });
     }
 });
 
@@ -382,7 +419,9 @@ router.get('/test-results', authenticateToken, authorizeRole('admin'), async (re
             JOIN users u ON tr.student_id = u.id
             JOIN mock_tests t ON tr.test_id = t.id
             LEFT JOIN modules m ON t.module_id = m.id
-            LEFT JOIN courses c ON (t.course_id = c.id OR m.course_id = c.id)
+            LEFT JOIN course_modules cm ON m.id = cm.module_id
+            LEFT JOIN courses c ON (t.course_id = c.id OR cm.course_id = c.id)
+            GROUP BY tr.id -- Prevent duplicates if a module is in multiple courses
             ORDER BY tr.completed_at DESC
         `);
 
@@ -409,7 +448,9 @@ router.get('/submissions', authenticateToken, authorizeRole('admin'), async (req
             JOIN users u ON s.student_id = u.id
             JOIN assignments a ON s.assignment_id = a.id
             LEFT JOIN modules m ON a.module_id = m.id
-            LEFT JOIN courses c ON m.course_id = c.id
+            LEFT JOIN course_modules cm ON m.id = cm.module_id
+            LEFT JOIN courses c ON (a.course_id = c.id OR cm.course_id = c.id)
+            GROUP BY s.id
             ORDER BY s.submitted_at DESC
         `);
         res.json(result.rows);
@@ -457,6 +498,58 @@ router.delete('/delete-test/:testId', authenticateToken, authorizeRole('admin'),
         res.json({ message: "Mock test and related results deleted successfully" });
     } catch (error) {
         console.error("Delete test error:", error);
+        res.status(500).json({ message: error.message });
+    }
+});
+
+// ---------------- Settings Management ----------------
+
+// Get all settings
+router.get('/settings', authenticateToken, async (req, res) => {
+    try {
+        const result = await db.execute("SELECT setting_key, setting_value FROM settings");
+        const settings = {};
+        result.rows.forEach(row => {
+            try {
+                settings[row.setting_key] = JSON.parse(row.setting_value);
+            } catch {
+                settings[row.setting_key] = row.setting_value;
+            }
+        });
+        res.json(settings);
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+});
+
+// Update settings
+router.post('/settings', authenticateToken, async (req, res) => {
+    try {
+        const settings = req.body; // Expects key-value pairs
+        
+        for (const [key, value] of Object.entries(settings)) {
+            const stringValue = typeof value === 'object' ? JSON.stringify(value) : String(value);
+            
+            // Check if exists
+            const existing = await db.execute({
+                sql: "SELECT setting_key FROM settings WHERE setting_key = ?",
+                args: [key]
+            });
+            
+            if (existing.rows.length > 0) {
+                await db.execute({
+                    sql: "UPDATE settings SET setting_value = ? WHERE setting_key = ?",
+                    args: [stringValue, key]
+                });
+            } else {
+                await db.execute({
+                    sql: "INSERT INTO settings (setting_key, setting_value) VALUES (?, ?)",
+                    args: [key, stringValue]
+                });
+            }
+        }
+        res.json({ message: "Settings saved successfully" });
+    } catch (error) {
         res.status(500).json({ message: error.message });
     }
 });

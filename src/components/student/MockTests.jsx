@@ -142,13 +142,17 @@ const MockTests = () => {
                                 display: 'flex', 
                                 flexDirection: 'column', 
                                 height: '100%',
-                                position: 'relative'
+                                position: 'relative',
+                                background: 'linear-gradient(135deg, rgba(15, 23, 42, 0.95), rgba(30, 41, 59, 0.95))',
+                                border: '1px solid rgba(251, 146, 60, 0.2)',
+                                borderRadius: '1rem',
+                                boxShadow: '0 10px 30px -10px rgba(0, 0, 0, 0.6)'
                             }}
                         >
                             <div style={{
                                 padding: '1.25rem',
-                                borderBottom: '1px solid #F1F5F9',
-                                background: test.type === 'Coding' ? 'linear-gradient(135deg, #EEF2FF 0%, #E0E7FF 100%)' : 'linear-gradient(135deg, #F0FDF4 0%, #DCFCE7 100%)',
+                                borderBottom: '1px solid rgba(255, 255, 255, 0.05)',
+                                background: 'transparent',
                                 position: 'relative',
                                 display: 'flex',
                                 alignItems: 'center',
@@ -163,12 +167,12 @@ const MockTests = () => {
                                         width: '40px',
                                         height: '40px',
                                         borderRadius: '12px',
-                                        backgroundColor: 'white',
+                                        backgroundColor: 'rgba(255,255,255,0.1)',
                                         display: 'flex',
                                         alignItems: 'center',
                                         justifyContent: 'center',
                                         boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.05)',
-                                        color: test.type === 'Coding' ? '#4F46E5' : '#059669'
+                                        color: test.type === 'Coding' ? '#818cf8' : '#34d399'
                                     }}>
                                         {test.type === 'Coding' ? <Code size={20} /> : <BookOpen size={20} />}
                                     </div>
@@ -177,7 +181,7 @@ const MockTests = () => {
                                             fontSize: '0.7rem', 
                                             fontWeight: '800', 
                                             textTransform: 'uppercase', 
-                                            color: test.type === 'Coding' ? '#4F46E5' : '#059669',
+                                            color: test.type === 'Coding' ? '#818cf8' : '#34d399',
                                             letterSpacing: '0.05em',
                                             lineHeight: '1'
                                         }}>
@@ -191,10 +195,11 @@ const MockTests = () => {
                                 <h3 style={{ 
                                     fontSize: '1.25rem', 
                                     fontWeight: '900', 
-                                    color: '#1E293B', 
+                                    color: '#f8fafc', 
                                     marginBottom: '0.75rem',
                                     lineHeight: '1.3',
-                                    letterSpacing: '-0.025em'
+                                    letterSpacing: '-0.025em',
+                                    textShadow: '0 0 15px rgba(251,146,60,0.3)'
                                 }}>
                                     {test.title}
                                 </h3>
@@ -210,9 +215,9 @@ const MockTests = () => {
                                 }}>
                                     <span style={{ 
                                         padding: '0.25rem 0.6rem', 
-                                        backgroundColor: '#F1F5F9', 
+                                        backgroundColor: 'rgba(255,255,255,0.1)', 
                                         borderRadius: '6px',
-                                        color: '#475569'
+                                        color: '#cbd5e1'
                                     }}>
                                         {test.course_title}
                                     </span>
@@ -232,14 +237,14 @@ const MockTests = () => {
                                 }}>
                                     <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
                                         <span style={{ fontSize: '0.7rem', color: '#94A3B8', fontWeight: '700', textTransform: 'uppercase' }}>Limit</span>
-                                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', color: '#334155', fontWeight: '800' }}>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', color: '#f8fafc', fontWeight: '800' }}>
                                             <Clock size={14} style={{ color: '#6366F1' }} />
                                             <span>{test.duration} mins</span>
                                         </div>
                                     </div>
                                     <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
                                         <span style={{ fontSize: '0.7rem', color: '#94A3B8', fontWeight: '700', textTransform: 'uppercase' }}>Scope</span>
-                                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', color: '#334155', fontWeight: '800' }}>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', color: '#f8fafc', fontWeight: '800' }}>
                                             <PlayCircle size={14} style={{ color: '#F59E0B' }} />
                                             <span>{test.questions?.length || 0} Questions</span>
                                         </div>

@@ -76,26 +76,36 @@ export const markAttendance = async (sessionId, studentId, gpsData = null, devic
 
     if (recordRes.rows.length > 0) throw new Error('Already marked present');
 
-    // 4. Record Attendance
+    // 4. Calculate Late Flag
+    const sessionStartTime = new Date(session.start_time).getTime();
+    const currentTime = Date.now();
+    const diffMins = (currentTime - sessionStartTime) / 60000;
+    const isLate = diffMins > 15; // 15 mins grace period
+
+    // 5. Record Attendance
     await db.execute({
         sql: `INSERT INTO attendance_records (
                 session_id, student_id, join_time, status, 
-                gps_verified, device_info, ip_address, attendance_type
-              ) VALUES (?, ?, CURRENT_TIMESTAMP, 'present', ?, ?, ?, ?)`,
+                gps_verified, device_info, ip_address, attendance_type,
+                late_flag, attendance_percentage, remarks
+              ) VALUES (?, ?, CURRENT_TIMESTAMP, 'present', ?, ?, ?, ?, ?, 100, ?)`,
         args: [
             sessionId, 
             studentId, 
             gpsVerified ? 1 : 0, 
             deviceInfo || 'Unknown Device',
             ipAddress || 'Unknown IP',
-            session.type
+            session.type,
+            isLate ? 1 : 0,
+            isLate ? 'Marked present but late (+15 mins)' : 'On-time attendance'
         ]
     });
 
     return { 
         success: true, 
-        message: 'Attendance verified and recorded',
-        type: session.type
+        message: isLate ? 'Attendance marked (Late)' : 'Attendance verified and recorded',
+        type: session.type,
+        isLate
     };
 };
 

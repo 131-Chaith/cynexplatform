@@ -17,6 +17,7 @@ import modulesRouter from './routes/modules.js';
 import videosRouter from './routes/videos.js';
 import attendanceRouter from './routes/attendance.js';
 import youtubeRouter from './routes/youtube.js';
+import announcementsRouter from './routes/announcements.js';
 
 
 const __filename = fileURLToPath(import.meta.url);
@@ -59,6 +60,7 @@ app.use('/api/modules', modulesRouter);
 app.use('/api/videos', videosRouter);
 app.use('/api/attendance', attendanceRouter);
 app.use('/api/youtube', youtubeRouter);
+app.use('/api/announcements', announcementsRouter);
 
 
 app.get('/', (req, res) => {

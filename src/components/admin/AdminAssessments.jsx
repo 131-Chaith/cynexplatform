@@ -18,6 +18,7 @@ const AdminAssessments = () => {
     // Data State
     const [assignments, setAssignments] = useState([]);
     const [tests, setTests] = useState([]);
+    const [courses, setCourses] = useState([]); // Add courses state
     const [testResults, setTestResults] = useState([]);
     const [loadingData, setLoadingData] = useState(false);
 
@@ -28,31 +29,42 @@ const AdminAssessments = () => {
     const [isAnswersModalOpen, setIsAnswersModalOpen] = useState(false);
     const [submitting, setSubmitting] = useState(false);
 
+    // View Modal State
+    const [viewingAssignment, setViewingAssignment] = useState(null);
+    const [isViewAssignmentModalOpen, setIsViewAssignmentModalOpen] = useState(false);
+    const [viewingTest, setViewingTest] = useState(null);
+    const [isViewTestModalOpen, setIsViewTestModalOpen] = useState(false);
+
     // Forms
-    const [assignmentForm, setAssignmentForm] = useState({ 
+    const [assignmentForm, setAssignmentForm] = useState({
         title: '', description: '', due_date: '',
         type: 'standard', problem_statement: '', starter_code: '', expected_output: '',
-        difficulty: 'Easy', test_cases: '[]'
+        difficulty: 'Easy', test_cases: '[]',
+        course_id: '' // Add course_id
     });
-    const [testForm, setTestForm] = useState({ title: '', duration: '', total_marks: '', type: 'MCQ', questions: [] });
+    const [testForm, setTestForm] = useState({ title: '', duration: '', total_marks: '', type: 'MCQ', questions: [], course_id: '' });
 
     // For Mock Test Questions
     const [questionsJson, setQuestionsJson] = useState('[]');
 
     useEffect(() => {
         // Fetch Modules
-        const fetchModules = async () => {
+        const fetchInitialData = async () => {
             try {
-                const res = await api.get('modules');
-                setModules(res.data);
-                if (res.data.length > 0) {
-                    setSelectedModuleId(res.data[0].id);
+                const [modRes, courseRes] = await Promise.all([
+                    api.get('modules'),
+                    api.get('courses')
+                ]);
+                setModules(modRes.data);
+                setCourses(courseRes.data);
+                if (modRes.data.length > 0) {
+                    setSelectedModuleId(modRes.data[0].id);
                 }
             } catch (err) {
-                console.error("Failed to fetch modules", err);
+                console.error("Failed to fetch initial data", err);
             }
         };
-        fetchModules();
+        fetchInitialData();
     }, []);
 
     useEffect(() => {
@@ -86,10 +98,11 @@ const AdminAssessments = () => {
             await api.post(`modules/${selectedModuleId}/assignments`, assignmentForm);
             await fetchModuleContent(selectedModuleId);
             setIsAssignmentModalOpen(false);
-            setAssignmentForm({ 
+            setAssignmentForm({
                 title: '', description: '', due_date: '',
                 type: 'standard', problem_statement: '', starter_code: '', expected_output: '',
-                difficulty: 'Easy', test_cases: '[]'
+                difficulty: 'Easy', test_cases: '[]',
+                course_id: ''
             });
             alert("Assignment created!");
         } catch (error) {
@@ -142,7 +155,7 @@ const AdminAssessments = () => {
             });
             await fetchModuleContent(selectedModuleId);
             setIsTestModalOpen(false);
-            setTestForm({ title: '', duration: '', total_marks: '', type: 'MCQ', questions: [] });
+            setTestForm({ title: '', duration: '', total_marks: '', type: 'MCQ', questions: [], course_id: '' });
             setQuestionsJson('[]');
             alert("Test created!");
         } catch (error) {
@@ -155,49 +168,50 @@ const AdminAssessments = () => {
     };
 
     return (
-        <div>
+        <div style={{ backgroundColor: '#ffffff', minHeight: '100vh', padding: '2rem', borderRadius: '1rem' }}>
             <div style={{ marginBottom: '2.5rem' }}>
-                <h1 style={{ 
-                    fontSize: '2.25rem', 
-                    fontWeight: '900', 
-                    color: '#f8fafc', 
+                <h1 style={{
+                    fontSize: '2.5rem',
+                    fontWeight: '900',
+                    color: '#e0f2fe',
                     marginBottom: '0.5rem',
                     letterSpacing: '-0.025em',
-                    textShadow: '0 0 30px rgba(56, 189, 248, 0.3)'
+                    WebkitTextStroke: '1px #bae6fd', // to simulate the glowing light text on white bg from the mockup
+                    textShadow: '0px 4px 20px rgba(56, 189, 248, 0.4)'
                 }}>
                     Assessments Control
                 </h1>
-                <p style={{ color: '#94a3b8', fontWeight: '600', fontSize: '1rem' }}>
+                <p style={{ color: '#64748b', fontWeight: '600', fontSize: '1rem' }}>
                     Deploy and monitor assignments and simulation tests across modules.
                 </p>
             </div>
 
             {/* Module Selector */}
-            <div style={{ marginBottom: '2rem', display: 'flex', alignItems: 'center', gap: '1rem', background: 'linear-gradient(135deg, rgba(15, 23, 42, 0.8), rgba(30, 41, 59, 0.8))', padding: '1.5rem', borderRadius: '1rem', border: '1px solid rgba(56, 189, 248, 0.2)' }}>
-                <label style={{ fontWeight: '800', color: '#bae6fd', textTransform: 'uppercase', letterSpacing: '0.05em', fontSize: '0.85rem' }}>Active Module:</label>
+            <div style={{ marginBottom: '2rem', display: 'flex', alignItems: 'center', gap: '1rem', background: '#334155', padding: '1.25rem 2rem', borderRadius: '0.75rem', boxShadow: '0 10px 15px -3px rgba(0,0,0,0.1)' }}>
+                <label style={{ fontWeight: '800', color: '#bae6fd', textTransform: 'uppercase', letterSpacing: '0.05em', fontSize: '0.85rem' }}>ACTIVE MODULE:</label>
                 <select
                     value={selectedModuleId}
                     onChange={(e) => setSelectedModuleId(e.target.value)}
-                    style={{ padding: '0.75rem 1rem', borderRadius: '0.75rem', border: '1px solid rgba(56, 189, 248, 0.3)', minWidth: '250px', background: 'rgba(15, 23, 42, 0.9)', color: '#f8fafc', fontWeight: '700', outline: 'none' }}
+                    style={{ padding: '0.75rem 1rem', borderRadius: '0.5rem', border: '1px solid #1e293b', minWidth: '300px', background: '#0f172a', color: '#f8fafc', fontWeight: '700', outline: 'none', appearance: 'none', cursor: 'pointer' }}
                 >
                     {modules.map(m => <option key={m.id} value={m.id}>{m.title}</option>)}
                 </select>
             </div>
 
             {/* Tabs */}
-            <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '2rem', overflowX: 'auto', borderBottom: '1px solid rgba(255, 255, 255, 0.05)', paddingBottom: '0.5rem' }}>
+            <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '2rem', overflowX: 'auto', borderBottom: '1px solid #e2e8f0', paddingBottom: '0.5rem' }}>
                 {['assignments', 'tests', 'results'].map(tab => (
-                    <button 
+                    <button
                         key={tab}
-                        onClick={() => setActiveTab(tab)} 
-                        style={{ 
-                            padding: '0.75rem 1.5rem', 
-                            background: activeTab === tab ? 'rgba(56, 189, 248, 0.1)' : 'transparent', 
-                            border: 'none', 
+                        onClick={() => setActiveTab(tab)}
+                        style={{
+                            padding: '0.75rem 1.5rem',
+                            background: activeTab === tab ? '#e0f2fe' : 'transparent',
+                            border: 'none',
                             borderRadius: '0.5rem 0.5rem 0 0',
-                            borderBottom: activeTab === tab ? '2px solid #38bdf8' : '2px solid transparent', 
-                            color: activeTab === tab ? '#38bdf8' : '#94a3b8', 
-                            fontWeight: activeTab === tab ? '900' : '700', 
+                            borderBottom: activeTab === tab ? '2px solid #38bdf8' : '2px solid transparent',
+                            color: activeTab === tab ? '#38bdf8' : '#94a3b8',
+                            fontWeight: activeTab === tab ? '900' : '700',
                             textTransform: 'uppercase',
                             fontSize: '0.75rem',
                             letterSpacing: '0.05em',
@@ -216,10 +230,10 @@ const AdminAssessments = () => {
                     {activeTab === 'assignments' && (
                         <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3 }}>
                             <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '1.5rem' }}>
-                                <Button 
-                                    onClick={() => setIsAssignmentModalOpen(true)} 
+                                <Button
+                                    onClick={() => setIsAssignmentModalOpen(true)}
                                     disabled={!selectedModuleId}
-                                    style={{ borderRadius: '12px', fontWeight: '900', background: 'linear-gradient(90deg, #38bdf8, #818cf8)', border: 'none' }}
+                                    style={{ borderRadius: '12px', fontWeight: '900', background: 'linear-gradient(90deg, #60a5fa, #818cf8)', border: 'none', color: '#ffffff' }}
                                 >
                                     <Plus size={18} /> INITIALIZE ASSIGNMENT
                                 </Button>
@@ -227,52 +241,55 @@ const AdminAssessments = () => {
                             <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
                                 <AnimatePresence>
                                     {assignments.map(a => (
-                                        <motion.div 
+                                        <motion.div
                                             key={a.id}
                                             initial={{ opacity: 0, x: -20 }}
                                             animate={{ opacity: 1, x: 0 }}
                                             exit={{ opacity: 0, scale: 0.95 }}
                                             whileHover={{ scale: 1.01, x: 8 }}
-                                            style={{ 
-                                                display: 'flex', 
-                                                justifyContent: 'space-between', 
+                                            style={{
+                                                display: 'flex',
+                                                justifyContent: 'space-between',
                                                 alignItems: 'center',
                                                 padding: '1.5rem',
-                                                background: 'linear-gradient(135deg, rgba(15, 23, 42, 0.95), rgba(30, 41, 59, 0.95))',
-                                                border: '1px solid rgba(56, 189, 248, 0.2)',
+                                                background: '#1e293b',
+                                                border: '1px solid #334155',
                                                 borderRadius: '1rem',
-                                                boxShadow: '0 10px 30px -10px rgba(0, 0, 0, 0.6)',
+                                                boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1)',
                                                 position: 'relative',
                                                 overflow: 'hidden'
                                             }}
                                         >
                                             <div style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: '4px', background: 'linear-gradient(to bottom, #38bdf8, #818cf8)' }} />
-                                            
+
                                             <div style={{ marginLeft: '1rem' }}>
                                                 <h3 style={{ fontWeight: '900', color: '#f8fafc', fontSize: '1.25rem', marginBottom: '0.5rem', textShadow: '0 0 15px rgba(56,189,248,0.3)', letterSpacing: '-0.02em' }}>
                                                     {a.title}
                                                 </h3>
                                                 <div style={{ display: 'flex', alignItems: 'center', gap: '1.5rem' }}>
                                                     <p style={{ fontSize: '0.8rem', color: '#94a3b8', fontWeight: '800', textTransform: 'uppercase', letterSpacing: '0.05em', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                                                        <Calendar size={14} color="#38bdf8" /> 
-                                                        Termination: <span style={{ color: '#f8fafc' }}>{new Date(a.due_date).toLocaleDateString()}</span>
+                                                        <Calendar size={14} color="#38bdf8" />
+                                                        TERMINATION: <span style={{ color: '#f8fafc' }}>{new Date(a.due_date).toLocaleDateString()}</span>
                                                     </p>
                                                     <span style={{ fontSize: '0.7rem', fontWeight: '800', background: 'rgba(56, 189, 248, 0.1)', color: '#38bdf8', padding: '0.25rem 0.75rem', borderRadius: '1rem', border: '1px solid rgba(56, 189, 248, 0.3)' }}>
-                                                        {a.type || 'Standard'}
+                                                        {a.type || 'standard'}
                                                     </span>
                                                 </div>
                                             </div>
 
                                             <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', zIndex: 1 }}>
-                                                <button 
+                                                <button
                                                     onClick={(e) => { e.stopPropagation(); handleDeleteAssignment(a.id); }}
                                                     style={{ border: 'none', background: 'rgba(239, 68, 68, 0.1)', cursor: 'pointer', color: '#ef4444', height: '40px', width: '40px', borderRadius: '0.5rem', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.2s' }}
                                                 >
                                                     <Trash2 size={18} />
                                                 </button>
-                                                <div style={{ height: '48px', width: '48px', backgroundColor: 'rgba(56, 189, 248, 0.15)', borderRadius: '0.75rem', color: '#38bdf8', border: '1px solid rgba(56, 189, 248, 0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                                                    <FileText size={24} />
-                                                </div>
+                                                <button
+                                                    onClick={(e) => { e.stopPropagation(); setViewingAssignment(a); setIsViewAssignmentModalOpen(true); }}
+                                                    style={{ cursor: 'pointer', height: '40px', width: '40px', backgroundColor: 'rgba(56, 189, 248, 0.15)', borderRadius: '0.5rem', color: '#38bdf8', border: '1px solid rgba(56, 189, 248, 0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.2s' }}
+                                                >
+                                                    <FileText size={18} />
+                                                </button>
                                             </div>
                                         </motion.div>
                                     ))}
@@ -287,84 +304,35 @@ const AdminAssessments = () => {
                         </motion.div>
                     )}
 
-                    {/* Tests Tab */}
-                    {activeTab === 'tests' && (
-                        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3 }}>
-                            <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '1.5rem' }}>
-                                <Button 
-                                    onClick={() => setIsTestModalOpen(true)} 
-                                    disabled={!selectedModuleId}
-                                    style={{ borderRadius: '12px', fontWeight: '900', background: 'linear-gradient(90deg, #fb923c, #f43f5e)', border: 'none' }}
-                                >
-                                    <Plus size={18} /> INITIALIZE SIMULATION
-                                </Button>
-                            </div>
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-                                <AnimatePresence>
-                                    {tests.map(t => (
-                                        <motion.div 
-                                            key={t.id}
-                                            initial={{ opacity: 0, x: -20 }}
-                                            animate={{ opacity: 1, x: 0 }}
-                                            exit={{ opacity: 0, scale: 0.95 }}
-                                            whileHover={{ scale: 1.01, x: 8 }}
-                                            style={{ 
-                                                display: 'flex', 
-                                                justifyContent: 'space-between', 
-                                                alignItems: 'center',
-                                                padding: '1.5rem',
-                                                background: 'linear-gradient(135deg, rgba(15, 23, 42, 0.95), rgba(30, 41, 59, 0.95))',
-                                                border: '1px solid rgba(251, 146, 60, 0.2)',
-                                                borderRadius: '1rem',
-                                                boxShadow: '0 10px 30px -10px rgba(0, 0, 0, 0.6)',
-                                                position: 'relative',
-                                                overflow: 'hidden'
-                                            }}
-                                        >
-                                            <div style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: '4px', background: 'linear-gradient(to bottom, #fb923c, #f43f5e)' }} />
-                                            
-                                            <div style={{ marginLeft: '1rem' }}>
-                                                <h3 style={{ fontWeight: '900', color: '#f8fafc', fontSize: '1.25rem', marginBottom: '0.5rem', textShadow: '0 0 15px rgba(251,146,60,0.3)', letterSpacing: '-0.02em' }}>
-                                                    {t.title}
-                                                </h3>
-                                                <div style={{ display: 'flex', alignItems: 'center', gap: '1.5rem' }}>
-                                                    <p style={{ fontSize: '0.8rem', color: '#94a3b8', fontWeight: '800', textTransform: 'uppercase', letterSpacing: '0.05em', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                                                        <Clock size={14} color="#fb923c" /> 
-                                                        Limit: <span style={{ color: '#f8fafc' }}>{t.duration} mins</span>
-                                                    </p>
-                                                    <p style={{ fontSize: '0.8rem', color: '#94a3b8', fontWeight: '800', textTransform: 'uppercase', letterSpacing: '0.05em', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                                                        <Activity size={14} color="#f43f5e" /> 
-                                                        Target: <span style={{ color: '#f8fafc' }}>{t.total_marks} mk</span>
-                                                    </p>
-                                                    <span style={{ fontSize: '0.7rem', fontWeight: '900', background: 'rgba(251, 146, 60, 0.1)', color: '#fb923c', padding: '0.25rem 0.75rem', borderRadius: '1rem', border: '1px solid rgba(251, 146, 60, 0.3)', textTransform: 'uppercase' }}>
-                                                        {t.type}
-                                                    </span>
-                                                </div>
-                                            </div>
-
-                                            <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', zIndex: 1 }}>
-                                                <button 
-                                                    onClick={(e) => { e.stopPropagation(); handleDeleteTest(t.id); }}
-                                                    style={{ border: 'none', background: 'rgba(239, 68, 68, 0.1)', cursor: 'pointer', color: '#ef4444', height: '40px', width: '40px', borderRadius: '0.5rem', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.2s' }}
-                                                >
-                                                    <Trash2 size={18} />
-                                                </button>
-                                                <div style={{ height: '48px', width: '48px', backgroundColor: 'rgba(251, 146, 60, 0.15)', borderRadius: '0.75rem', color: '#fb923c', border: '1px solid rgba(251, 146, 60, 0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                                                    <Award size={24} />
-                                                </div>
-                                            </div>
-                                        </motion.div>
-                                    ))}
-                                </AnimatePresence>
-                                {tests.length === 0 && (
-                                    <div style={{ textAlign: 'center', padding: '4rem', color: '#475569', border: '1px dashed #1e293b', borderRadius: '1rem', background: 'rgba(0,0,0,0.2)' }}>
-                                        <Award size={40} style={{ opacity: 0.2, marginBottom: '1rem' }} />
-                                        <p style={{ fontWeight: '800', letterSpacing: '0.05em', textTransform: 'uppercase' }}>No simulations deployed.</p>
+                            {activeTab === 'tests' && (
+                                <div>
+                                    <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '1.5rem' }}>
+                                        <Button onClick={() => setIsTestModalOpen(true)} style={{ background: 'linear-gradient(90deg, #60a5fa, #818cf8)', color: 'white', borderRadius: '0.5rem', padding: '0.75rem 1.5rem', fontWeight: '800', border: 'none' }}>
+                                            <Plus size={16} style={{ marginRight: '0.5rem' }} /> INITIALIZE MOCK TEST
+                                        </Button>
                                     </div>
-                                )}
-                            </div>
-                        </motion.div>
-                    )}
+                                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: '1.5rem' }}>
+                                        {tests.map(test => (
+                                            <div key={test.id} style={{ background: '#1e293b', borderRadius: '1rem', padding: '1.5rem', color: '#f8fafc', boxShadow: '0 10px 15px -3px rgba(0,0,0,0.1)', position: 'relative' }}>
+                                                <h3 style={{ fontSize: '1.25rem', fontWeight: '800', marginBottom: '1rem' }}>{test.title}</h3>
+                                                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: '#94a3b8', fontSize: '0.8rem', fontWeight: '600', marginBottom: '1.5rem' }}>
+                                                    <Clock size={14} /> DURATION: {test.duration} MINS
+                                                    <span style={{ marginLeft: 'auto', background: 'rgba(56, 189, 248, 0.1)', color: '#38bdf8', padding: '0.2rem 0.6rem', borderRadius: '1rem', border: '1px solid rgba(56, 189, 248, 0.2)', textTransform: 'uppercase' }}>{test.type}</span>
+                                                </div>
+                                                <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'flex-end' }}>
+                                                    <button onClick={() => handleDeleteTest(test.id)} style={{ background: 'rgba(239, 68, 68, 0.1)', color: '#ef4444', border: 'none', padding: '0.6rem', borderRadius: '0.5rem', cursor: 'pointer' }}>
+                                                        <Trash2 size={16} />
+                                                    </button>
+                                                    <button onClick={() => { setViewingTest(test); setIsViewTestModalOpen(true); }} style={{ background: 'rgba(56, 189, 248, 0.1)', color: '#38bdf8', border: 'none', padding: '0.6rem', borderRadius: '0.5rem', cursor: 'pointer' }}>
+                                                        <FileText size={16} />
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        ))}
+                                        {tests.length === 0 && <p style={{ color: '#64748b' }}>No mock tests found.</p>}
+                                    </div>
+                                </div>
+                            )}
                     {/* Test Results Tab */}
                     {activeTab === 'results' && (
                         <div>
@@ -441,13 +409,26 @@ const AdminAssessments = () => {
                             <button onClick={() => setIsAssignmentModalOpen(false)} style={{ background: 'none', border: 'none', cursor: 'pointer' }}><X size={20} /></button>
                         </div>
                         <form onSubmit={handleCreateAssignment}>
+                            <div style={{ marginBottom: '1rem' }}>
+                                <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500' }}>Target Course *</label>
+                                <select
+                                    value={assignmentForm.course_id}
+                                    onChange={e => setAssignmentForm({ ...assignmentForm, course_id: e.target.value })}
+                                    required
+                                    style={{ width: '100%', padding: '0.75rem', borderRadius: '0.375rem', border: '1px solid #D1D5DB' }}
+                                >
+                                    <option value="">-- Select Course --</option>
+                                    {courses.map(c => <option key={c.id} value={c.id}>{c.title}</option>)}
+                                </select>
+                            </div>
+
                             <Input label="Title" value={assignmentForm.title} onChange={e => setAssignmentForm({ ...assignmentForm, title: e.target.value })} required />
                             <Input label="Description (Instructions)" value={assignmentForm.description} onChange={e => setAssignmentForm({ ...assignmentForm, description: e.target.value })} textarea required />
-                            
+
                             <div style={{ marginBottom: '1rem' }}>
                                 <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500' }}>Assignment Type</label>
-                                <select 
-                                    value={assignmentForm.type} 
+                                <select
+                                    value={assignmentForm.type}
                                     onChange={e => setAssignmentForm({ ...assignmentForm, type: e.target.value })}
                                     style={{ width: '100%', padding: '0.75rem', borderRadius: '0.375rem', border: '1px solid #D1D5DB' }}
                                 >
@@ -459,11 +440,11 @@ const AdminAssessments = () => {
                             {assignmentForm.type === 'interactive' && (
                                 <div style={{ border: '1px solid #E0E7FF', padding: '1rem', borderRadius: '0.5rem', backgroundColor: '#F8FAFC', marginBottom: '1rem' }}>
                                     <h4 style={{ fontSize: '0.875rem', fontWeight: 'bold', marginBottom: '1rem', color: 'var(--primary)' }}>Coding Configuration</h4>
-                                    
+
                                     <div style={{ marginBottom: '1rem' }}>
                                         <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', fontSize: '0.875rem' }}>Difficulty</label>
-                                        <select 
-                                            value={assignmentForm.difficulty} 
+                                        <select
+                                            value={assignmentForm.difficulty}
                                             onChange={e => setAssignmentForm({ ...assignmentForm, difficulty: e.target.value })}
                                             style={{ width: '100%', padding: '0.5rem', borderRadius: '0.375rem', border: '1px solid #D1D5DB' }}
                                         >
@@ -495,6 +476,18 @@ const AdminAssessments = () => {
                             <button onClick={() => setIsTestModalOpen(false)} style={{ background: 'none', border: 'none', cursor: 'pointer' }}><X size={20} /></button>
                         </div>
                         <form onSubmit={handleCreateTest}>
+                            <div style={{ marginBottom: '1rem' }}>
+                                <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500' }}>Target Course *</label>
+                                <select
+                                    value={testForm.course_id}
+                                    onChange={e => setTestForm({ ...testForm, course_id: e.target.value })}
+                                    required
+                                    style={{ width: '100%', padding: '0.75rem', borderRadius: '0.375rem', border: '1px solid #D1D5DB' }}
+                                >
+                                    <option value="">-- Select Course --</option>
+                                    {courses.map(c => <option key={c.id} value={c.id}>{c.title}</option>)}
+                                </select>
+                            </div>
                             <Input label="Title" value={testForm.title} onChange={e => setTestForm({ ...testForm, title: e.target.value })} required />
                             <Input label="Duration (mins)" type="number" value={testForm.duration} onChange={e => setTestForm({ ...testForm, duration: e.target.value })} required />
                             <Input label="Total Marks" type="number" value={testForm.total_marks} onChange={e => setTestForm({ ...testForm, total_marks: e.target.value })} required />
@@ -602,6 +595,57 @@ const AdminAssessments = () => {
                         </div>
                         <div style={{ marginTop: '2rem' }}>
                             <Button onClick={() => setIsAnswersModalOpen(false)} style={{ width: '100%' }}>Close</Button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* View Assignment Modal */}
+            {isViewAssignmentModalOpen && viewingAssignment && (
+                <div style={modalStyle}>
+                    <div style={modalContentStyle}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '1.5rem' }}>
+                            <h3 style={{ fontSize: '1.25rem', fontWeight: 'bold' }}>Assignment Details</h3>
+                            <button onClick={() => setIsViewAssignmentModalOpen(false)} style={{ background: 'none', border: 'none', cursor: 'pointer' }}><X size={20} /></button>
+                        </div>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                            <p><strong>Title:</strong> {viewingAssignment.title}</p>
+                            <p><strong>Type:</strong> {viewingAssignment.type || 'Standard'}</p>
+                            <p><strong>Description:</strong> {viewingAssignment.description}</p>
+                            <p><strong>Due Date:</strong> {new Date(viewingAssignment.due_date).toLocaleDateString()}</p>
+                            {viewingAssignment.type === 'interactive' && (
+                                <>
+                                    <p><strong>Difficulty:</strong> {viewingAssignment.difficulty}</p>
+                                    <p><strong>Problem Statement:</strong> {viewingAssignment.problem_statement}</p>
+                                    <p><strong>Expected Output:</strong> {viewingAssignment.expected_output}</p>
+                                </>
+                            )}
+                            <Button onClick={() => setIsViewAssignmentModalOpen(false)} style={{ marginTop: '1rem', width: '100%' }}>Close</Button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* View Test Modal */}
+            {isViewTestModalOpen && viewingTest && (
+                <div style={modalStyle}>
+                    <div style={{ ...modalContentStyle, maxWidth: '600px' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '1.5rem' }}>
+                            <h3 style={{ fontSize: '1.25rem', fontWeight: 'bold' }}>Mock Test Details</h3>
+                            <button onClick={() => setIsViewTestModalOpen(false)} style={{ background: 'none', border: 'none', cursor: 'pointer' }}><X size={20} /></button>
+                        </div>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                            <p><strong>Title:</strong> {viewingTest.title}</p>
+                            <p><strong>Type:</strong> {viewingTest.type}</p>
+                            <p><strong>Duration:</strong> {viewingTest.duration} mins</p>
+                            <p><strong>Total Marks:</strong> {viewingTest.total_marks}</p>
+                            <div>
+                                <strong>Questions:</strong>
+                                <pre style={{ background: '#f1f5f9', padding: '1rem', borderRadius: '0.5rem', overflowX: 'auto', fontSize: '0.875rem', maxHeight: '300px' }}>
+                                    {typeof viewingTest.questions === 'string' ? viewingTest.questions : JSON.stringify(viewingTest.questions, null, 2)}
+                                </pre>
+                            </div>
+                            <Button onClick={() => setIsViewTestModalOpen(false)} style={{ marginTop: '1rem', width: '100%' }}>Close</Button>
                         </div>
                     </div>
                 </div>

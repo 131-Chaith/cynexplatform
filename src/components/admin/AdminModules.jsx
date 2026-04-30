@@ -66,7 +66,8 @@ const AdminModules = () => {
             alert("Module Deleted Successfully!");
             fetchModules();
         } catch (error) {
-            alert("Failed to delete module");
+            const msg = error.response?.data?.message || error.message;
+            alert("Failed to delete module: " + msg);
         }
     };
 
@@ -116,34 +117,67 @@ const AdminModules = () => {
             {showModal && (
                 <div style={{
                     position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
-                    backgroundColor: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000
+                    backgroundColor: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(8px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000
                 }}>
-                    <Card style={{ width: '100%', maxWidth: '450px', position: 'relative' }}>
+                    <Card style={{ 
+                        width: '100%', 
+                        maxWidth: '550px', 
+                        position: 'relative', 
+                        backgroundColor: 'white',
+                        borderRadius: '2.5rem',
+                        padding: '3rem'
+                    }}>
                         <button
                             onClick={() => { setShowModal(false); setEditingModule(null); }}
-                            style={{ position: 'absolute', top: '1rem', right: '1rem', border: 'none', background: 'none', cursor: 'pointer', color: 'var(--text-light)' }}
+                            style={{ 
+                                position: 'absolute', 
+                                top: '2rem', 
+                                right: '2rem', 
+                                border: 'none', 
+                                background: '#F1F5F9',
+                                width: '48px',
+                                height: '48px',
+                                borderRadius: '50%',
+                                cursor: 'pointer', 
+                                color: '#475569',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                zIndex: 10,
+                                transition: 'all 0.2s'
+                            }}
+                            onMouseOver={e => e.currentTarget.style.background = '#E2E8F0'}
+                            onMouseOut={e => e.currentTarget.style.background = '#F1F5F9'}
                         >
-                            <X size={20} />
+                            <X size={24} />
                         </button>
-                        <h3 style={{ fontSize: '1.25rem', fontWeight: 'bold', marginBottom: '1.5rem' }}>
+                        <h3 style={{ fontSize: '2rem', fontWeight: '900', marginBottom: '0.75rem', color: '#0F172A', letterSpacing: '-0.03em' }}>
                             {editingModule ? 'Edit Module' : 'Create Module'}
                         </h3>
-                        <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-                            <Input
-                                label="Module Title"
-                                value={formData.title}
-                                onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-                                required
-                                placeholder="e.g. Advanced SQL"
-                            />
-                            <Input
-                                label="Description"
-                                textarea
-                                value={formData.description}
-                                onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                                placeholder="What will students learn in this module?"
-                            />
-                            <Button type="submit" style={{ marginTop: '1rem' }}>
+                        <p style={{ color: '#64748B', fontSize: '1rem', marginBottom: '2.5rem', fontWeight: '500' }}>
+                            {editingModule ? 'Update the details for this reusable curriculum block.' : 'Define a new reusable curriculum block to attach to your courses.'}
+                        </p>
+                        <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
+                            <div style={{ width: '100%' }}>
+                                <label style={{ display: 'block', fontWeight: '800', fontSize: '0.9rem', marginBottom: '0.6rem', color: '#475569', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Module Title *</label>
+                                <input
+                                    value={formData.title}
+                                    onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+                                    required
+                                    placeholder="e.g. Advanced SQL"
+                                    style={{ width: '100%', padding: '1.1rem 1.25rem', border: '1px solid #E2E8F0', borderRadius: '14px', fontSize: '1.05rem', outline: 'none', boxSizing: 'border-box', background: '#F8FAFC' }}
+                                />
+                            </div>
+                            <div style={{ width: '100%' }}>
+                                <label style={{ display: 'block', fontWeight: '800', fontSize: '0.9rem', marginBottom: '0.6rem', color: '#475569', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Description</label>
+                                <textarea
+                                    value={formData.description}
+                                    onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                                    placeholder="What will students learn in this module?"
+                                    style={{ width: '100%', padding: '1.1rem 1.25rem', border: '1px solid #E2E8F0', borderRadius: '14px', fontSize: '1rem', outline: 'none', boxSizing: 'border-box', background: '#F8FAFC', minHeight: '120px', fontFamily: 'inherit' }}
+                                />
+                            </div>
+                            <Button type="submit" style={{ padding: '1.25rem', borderRadius: '16px', fontWeight: '900', fontSize: '1.1rem', marginTop: '1rem' }}>
                                 {editingModule ? 'Update Module' : 'Create Module'}
                             </Button>
                         </form>

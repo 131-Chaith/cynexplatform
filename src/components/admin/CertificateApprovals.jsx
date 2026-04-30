@@ -10,11 +10,6 @@ const CertificateApprovals = () => {
     // Filter only pending requests
     const pendingRequests = (data.certificateRequests || []).filter(req => req.status === 'pending');
 
-    const getStudentName = (email) => {
-        const student = (data.students || []).find(s => s.email === email);
-        return student ? student.name : email;
-    };
-
     const getCourseName = (courseId) => {
         const courses = data.courses || [];
         // Fallback for mock courses if they aren't in the global data yet (since we didn't fully implement course management)
@@ -57,7 +52,7 @@ const CertificateApprovals = () => {
 
                         <div style={{ flex: 1 }}>
                             <h3 style={{ fontSize: '1.125rem', fontWeight: 'bold', color: 'var(--text)' }}>
-                                {getStudentName(req.student_id || req.studentId)}
+                                {req.student_name || req.studentName || 'Unknown Student'}
                             </h3>
                             <p style={{ color: 'var(--text-light)', fontSize: '0.875rem' }}>
                                 Requested for <span style={{ fontWeight: '600', color: 'var(--primary)' }}>{getCourseName(req.course_id || req.courseId)}</span>
@@ -73,10 +68,19 @@ const CertificateApprovals = () => {
                         </div>
 
                         <div style={{ display: 'flex', gap: '1rem' }}>
-                            <Button variant="secondary" size="small" onClick={() => approveCertificate(req.id)}>
+                            <Button variant="secondary" size="small" onClick={async () => {
+                                const success = await approveCertificate(req.id);
+                                if (success) alert("Certificate approved and issued!");
+                            }}>
                                 <CheckCircle size={16} style={{ marginRight: '0.5rem' }} /> Approve
                             </Button>
-                            <Button variant="danger" size="small" onClick={() => rejectCertificate(req.id)}>
+                            <Button variant="danger" size="small" onClick={async () => {
+                                const reason = window.prompt("Enter instructions/reason for rejection:");
+                                if (reason !== null) {
+                                    const success = await rejectCertificate(req.id, reason);
+                                    if (success) alert("Certificate request rejected. Instructions sent to student.");
+                                }
+                            }}>
                                 <XCircle size={16} style={{ marginRight: '0.5rem' }} /> Reject
                             </Button>
                         </div>

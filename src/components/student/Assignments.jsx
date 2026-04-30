@@ -155,14 +155,14 @@ const Assignments = () => {
             {/* List */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
                 {filteredAssignments.map(assignment => (
-                    <Card key={assignment.id} style={{ padding: 0, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
+                    <Card key={assignment.id} style={{ padding: 0, overflow: 'hidden', display: 'flex', flexDirection: 'column', background: 'linear-gradient(135deg, rgba(15, 23, 42, 0.95), rgba(30, 41, 59, 0.95))', border: '1px solid rgba(56, 189, 248, 0.2)', borderRadius: '1rem', boxShadow: '0 10px 30px -10px rgba(0, 0, 0, 0.6)' }}>
                         <div style={{
                             display: 'flex',
                             gap: '1.5rem',
                             padding: '1.5rem',
                             alignItems: 'center',
-                            borderBottom: '1px solid #F1F5F9',
-                            background: 'linear-gradient(to right, #ffffff, #f8fafc)'
+                            borderBottom: '1px solid rgba(255, 255, 255, 0.05)',
+                            background: 'transparent'
                         }}>
                              <div style={{
                                 width: '56px',
@@ -180,7 +180,7 @@ const Assignments = () => {
 
                             <div style={{ flex: 1 }}>
                                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
-                                    <h3 style={{ fontSize: '1.25rem', fontWeight: '900', color: '#1E293B', letterSpacing: '-0.025em' }}>{assignment.title}</h3>
+                                    <h3 style={{ fontSize: '1.25rem', fontWeight: '900', color: '#f8fafc', letterSpacing: '-0.025em', textShadow: '0 0 15px rgba(56,189,248,0.3)' }}>{assignment.title}</h3>
                                     <div>
                                         {assignment.status === 'available' && (
                                             <span style={{
@@ -260,8 +260,8 @@ const Assignments = () => {
                             </div>
                         </div>
 
-                        <div style={{ padding: '1.5rem', backgroundColor: 'white' }}>
-                            <p style={{ color: '#475569', fontSize: '0.95rem', lineHeight: '1.6', marginBottom: '1.5rem' }}>
+                        <div style={{ padding: '1.5rem', backgroundColor: 'transparent' }}>
+                            <p style={{ color: '#94a3b8', fontSize: '0.95rem', lineHeight: '1.6', marginBottom: '1.5rem' }}>
                                 {assignment.description}
                             </p>
 

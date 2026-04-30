@@ -19,9 +19,56 @@ router.get('/profile', authenticateToken, async (req, res) => {
     }
 });
 
+// Student Self-Enrollment
+router.post('/enroll', authenticateToken, async (req, res) => {
+    const { course_id } = req.body;
+    try {
+        // Verify eligibility (e.g., login - already checked by middleware)
+        // Check if already enrolled
+        const existing = await db.execute({
+            sql: "SELECT id FROM enrollments WHERE student_id = ? AND course_id = ?",
+            args: [req.user.id, course_id]
+        });
+        
+        if (existing.rows.length > 0) {
+            return res.status(400).json({ message: "Already enrolled in this course." });
+        }
+        
+        // Check if course exists
+        const courseRes = await db.execute({
+            sql: "SELECT title FROM courses WHERE id = ?",
+            args: [course_id]
+        });
+        
+        if (courseRes.rows.length === 0) {
+            return res.status(404).json({ message: "Course not found." });
+        }
+        const courseTitle = courseRes.rows[0].title;
+        
+        // Enroll the student
+        await db.execute({
+            sql: "INSERT INTO enrollments (student_id, course_id) VALUES (?, ?)",
+            args: [req.user.id, course_id]
+        });
+        
+        // Notify Admin
+        const studentName = req.user.name || req.user.email;
+        await db.execute({
+            sql: "INSERT INTO notifications (user_id, type, title, message) SELECT id, 'enrollment', 'New Course Enrollment', ? FROM users WHERE role = 'admin' OR role = 'super_admin'",
+            args: [`Student ${studentName} has enrolled in ${courseTitle}`]
+        });
+        
+        res.status(201).json({ message: "Successfully enrolled in the course." });
+    } catch (error) {
+        console.error("Enrollment error:", error);
+        res.status(500).json({ message: error.message });
+    }
+});
+
+
 // Update Student Profile (self)
 router.put('/profile', authenticateToken, async (req, res) => {
-    const { name, phone, address, dob, gender, institution, highest_qualification, year_of_passing, resume_link } = req.body;
+    const { name, phone, address, dob, gender, institution, highest_qualification, year_of_passing, resume_link, skills } = req.body;
     try {
         // Update name in users table
         if (name) {
@@ -35,15 +82,18 @@ router.put('/profile', authenticateToken, async (req, res) => {
             sql: "SELECT id FROM students WHERE user_id = ?",
             args: [req.user.id]
         });
+        
+        const skillsString = Array.isArray(skills) ? JSON.stringify(skills) : null;
+        
         if (existing.rows.length > 0) {
             await db.execute({
-                sql: "UPDATE students SET phone = ?, address = ?, dob = ?, gender = ?, institution = ?, highest_qualification = ?, year_of_passing = ?, resume_link = ? WHERE user_id = ?",
-                args: [phone || null, address || null, dob || null, gender || 'Male', institution || null, highest_qualification || null, year_of_passing || null, resume_link || null, req.user.id]
+                sql: "UPDATE students SET phone = ?, address = ?, dob = ?, gender = ?, institution = ?, highest_qualification = ?, year_of_passing = ?, resume_link = ?, skills = ? WHERE user_id = ?",
+                args: [phone || null, address || null, dob || null, gender || 'Male', institution || null, highest_qualification || null, year_of_passing || null, resume_link || null, skillsString, req.user.id]
             });
         } else {
             await db.execute({
-                sql: "INSERT INTO students (user_id, phone, address, dob, gender, institution, highest_qualification, year_of_passing, resume_link) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
-                args: [req.user.id, phone || null, address || null, dob || null, gender || 'Male', institution || null, highest_qualification || null, year_of_passing || null, resume_link || null]
+                sql: "INSERT INTO students (user_id, phone, address, dob, gender, institution, highest_qualification, year_of_passing, resume_link, skills) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                args: [req.user.id, phone || null, address || null, dob || null, gender || 'Male', institution || null, highest_qualification || null, year_of_passing || null, resume_link || null, skillsString]
             });
         }
         res.json({ message: 'Profile updated successfully' });
@@ -241,6 +291,15 @@ router.post('/certificates/request', authenticateToken, (req, res, next) => {
             sql: "INSERT INTO certificate_requests (student_id, course_id, video_link) VALUES (?, ?, ?)",
             args: [studentId, courseId, video_link]
         });
+
+        // Notify Admins
+        const admins = await db.execute("SELECT id FROM users WHERE role = 'admin' OR role = 'super_admin'");
+        for (const admin of admins.rows) {
+            await db.execute({
+                sql: "INSERT INTO notifications (user_id, title, message, type) VALUES (?, ?, ?, ?)",
+                args: [admin.id, "New Certificate Request", "New certificate request pending approval with student video.", "info"]
+            });
+        }
         
         console.log('✅ Certificate request saved successfully');
         res.json({ message: "Certificate Requested Successfully", video_link: video_link });
@@ -358,8 +417,10 @@ router.get('/test-results', authenticateToken, async (req, res) => {
                   JOIN users u ON tr.student_id = u.id
                   JOIN mock_tests t ON tr.test_id = t.id
                   LEFT JOIN modules m ON t.module_id = m.id
-                  LEFT JOIN courses c ON (t.course_id = c.id OR m.course_id = c.id)
+                  LEFT JOIN course_modules cm ON m.id = cm.module_id
+                  LEFT JOIN courses c ON (t.course_id = c.id OR cm.course_id = c.id)
                   WHERE tr.student_id = ?
+                  GROUP BY tr.id
                   ORDER BY tr.completed_at DESC`,
             args: [req.user.id]
         });
@@ -384,7 +445,8 @@ router.get('/certificates/requests', authenticateToken, async (req, res) => {
             sql: `SELECT cr.*, c.title as course_title 
                   FROM certificate_requests cr
                   JOIN courses c ON cr.course_id = c.id
-                  WHERE cr.student_id = ?`,
+                  WHERE cr.student_id = ?
+                  ORDER BY cr.request_date DESC`,
             args: [req.user.id]
         });
         res.json(result.rows);

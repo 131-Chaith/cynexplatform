@@ -19,6 +19,45 @@ router.get('/classes/all', authenticateToken, authorizeRole('admin'), async (req
     }
 });
 
+// Get all courses with enrollment status (Public or Student)
+router.get('/all-catalog', authenticateToken, async (req, res) => {
+    try {
+        const courses = await db.execute("SELECT * FROM courses");
+        
+        let enrolledCourseIds = new Set();
+        if (req.user && req.user.role === 'student') {
+            const enrollments = await db.execute({
+                sql: "SELECT course_id FROM enrollments WHERE student_id = ?",
+                args: [req.user.id]
+            });
+            enrollments.rows.forEach(row => enrolledCourseIds.add(row.course_id));
+            
+            // Check batch enrollments
+            const userRes = await db.execute({
+                sql: "SELECT batch_id FROM users WHERE id = ?",
+                args: [req.user.id]
+            });
+            const batchId = userRes.rows[0]?.batch_id;
+            if (batchId) {
+                const batchCourses = await db.execute({
+                    sql: "SELECT course_id FROM batch_courses WHERE batch_id = ?",
+                    args: [batchId]
+                });
+                batchCourses.rows.forEach(row => enrolledCourseIds.add(row.course_id));
+            }
+        }
+        
+        const catalog = courses.rows.map(course => ({
+            ...course,
+            is_enrolled: enrolledCourseIds.has(course.id)
+        }));
+        
+        res.json(catalog);
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+});
+
 // Get all courses (Public or Student)
 router.get('/', authenticateToken, async (req, res) => {
     try {
@@ -47,6 +86,7 @@ router.get('/', authenticateToken, async (req, res) => {
         const result = await db.execute({ sql, args });
         res.json(result.rows);
     } catch (error) {
+        console.error("Error in GET /api/courses:", error);
         res.status(500).json({ message: error.message });
     }
 });

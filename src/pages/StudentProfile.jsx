@@ -18,6 +18,7 @@ const StudentProfile = () => {
     const [fetchError, setFetchError] = useState(null);
     const [uploadingPhoto, setUploadingPhoto] = useState(false);
     const [uploadingResume, setUploadingResume] = useState(false);
+    const [newSkill, setNewSkill] = useState('');
 
     const UPLOADS_URL = 'http://localhost:5002';
 
@@ -37,6 +38,11 @@ const StudentProfile = () => {
             }
 
             setProfileData(res.data);
+            let parsedSkills = [];
+            try {
+                parsedSkills = res.data.profile?.skills ? JSON.parse(res.data.profile.skills) : [];
+            } catch(e) { parsedSkills = []; }
+            
             setEditForm({
                 name: res.data.user.name || '',
                 phone: res.data.profile?.phone || '',
@@ -47,6 +53,7 @@ const StudentProfile = () => {
                 highest_qualification: res.data.profile?.highest_qualification || '',
                 year_of_passing: res.data.profile?.year_of_passing || '',
                 resume_link: res.data.profile?.resume_link || '',
+                skills: parsedSkills,
             });
         } catch (error) {
             console.error('Failed to load profile', error);
@@ -84,13 +91,30 @@ const StudentProfile = () => {
             const res = await api.post('/students/profile/photo', formData, {
                 headers: { 'Content-Type': 'multipart/form-data' }
             });
-            // Update local user state if needed, or just re-fetch profile
             setSaveMsg('Photo updated successfully!');
             fetchProfile(); 
         } catch (error) {
             setSaveMsg('Photo upload failed');
         } finally {
             setUploadingPhoto(false);
+            setTimeout(() => setSaveMsg(''), 3000);
+        }
+    };
+
+    const handleUpdateSkills = async (updatedSkills) => {
+        try {
+            // Send the updated skills array immediately to the backend
+            const payload = {
+                ...editForm,
+                skills: updatedSkills
+            };
+            await api.put('/students/profile', payload);
+            
+            // Update local state so it reflects immediately
+            setEditForm(prev => ({ ...prev, skills: updatedSkills }));
+        } catch (error) {
+            console.error("Failed to update skills:", error);
+            setSaveMsg('Failed to update skills');
             setTimeout(() => setSaveMsg(''), 3000);
         }
     };
@@ -247,95 +271,101 @@ const StudentProfile = () => {
                                 </label>
                             </div>
 
-                            <div>
-                                <h1 style={{ fontSize: '1.875rem', fontWeight: '800', color: '#1E293B', marginBottom: '0.35rem', letterSpacing: '-0.025em' }}>{user.name}</h1>
-                                <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', color: '#64748B', fontSize: '0.9rem' }}>
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                                        <Mail size={16} color="#94A3B8" /> {user.email}
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', flex: 1 }}>
+                                <h1 style={{ fontSize: '1.875rem', fontWeight: '800', color: '#1E293B', margin: 0, letterSpacing: '-0.025em' }}>{user.name}</h1>
+                                
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '1.25rem', flexWrap: 'wrap' }}>
+                                    {/* Email and Batch */}
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', color: '#64748B', fontSize: '0.9rem' }}>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                                            <Mail size={16} color="#94A3B8" /> {user.email}
+                                        </div>
+                                        <span style={{ height: '4px', width: '4px', borderRadius: '50%', backgroundColor: '#CBD5E1' }}></span>
+                                        <span style={{ 
+                                            backgroundColor: '#F0F9FF', color: '#0369A1', 
+                                            padding: '0.2rem 0.6rem', borderRadius: '6px', 
+                                            fontWeight: '700', fontSize: '0.75rem',
+                                            border: '1px solid #E0F2FE'
+                                        }}>
+                                            {profile.batch_name || 'batch 1'}
+                                        </span>
                                     </div>
-                                    <span style={{ height: '4px', width: '4px', borderRadius: '50%', backgroundColor: '#CBD5E1' }}></span>
-                                    <span style={{ 
-                                        backgroundColor: '#F0F9FF', color: '#0369A1', 
-                                        padding: '0.2rem 0.6rem', borderRadius: '6px', 
-                                        fontWeight: '700', fontSize: '0.75rem',
-                                        border: '1px solid #E0F2FE'
-                                    }}>
-                                        {profile.batch_name || 'ELITE BATCH'}
-                                    </span>
+
+                                    <span style={{ height: '20px', width: '1px', backgroundColor: '#E2E8F0', margin: '0 0.5rem' }}></span>
+
+                                    {/* Action Buttons */}
+                                    <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
+                                        {!editing ? (
+                                            <>
+                                                <button
+                                                    onClick={() => {}} 
+                                                    style={{
+                                                        display: 'flex', alignItems: 'center', gap: '0.5rem',
+                                                        padding: '0.5rem 1rem', backgroundColor: '#F8FAFC',
+                                                        color: '#475569', border: '1px solid #E2E8F0', borderRadius: '0.75rem',
+                                                        cursor: 'pointer', fontWeight: '600', fontSize: '0.85rem',
+                                                        transition: 'all 0.2s'
+                                                    }}
+                                                >
+                                                    <PlayCircle size={14} /> View Profile
+                                                </button>
+                                                <button
+                                                    onClick={() => window.open(profile.resume_link, '_blank')}
+                                                    disabled={!profile.resume_link}
+                                                    style={{
+                                                        display: 'flex', alignItems: 'center', gap: '0.5rem',
+                                                        padding: '0.5rem 1rem', backgroundColor: '#F8FAFC',
+                                                        color: '#475569', border: '1px solid #E2E8F0', borderRadius: '0.75rem',
+                                                        cursor: profile.resume_link ? 'pointer' : 'not-allowed', fontWeight: '600', fontSize: '0.85rem',
+                                                        opacity: profile.resume_link ? 1 : 0.6
+                                                    }}
+                                                >
+                                                    <FileText size={14} /> Resume
+                                                </button>
+                                                <button
+                                                    onClick={() => setEditing(true)}
+                                                    style={{
+                                                        display: 'flex', alignItems: 'center', gap: '0.5rem',
+                                                        padding: '0.5rem 1.25rem', backgroundColor: 'var(--primary)',
+                                                        color: 'white', border: 'none', borderRadius: '0.75rem',
+                                                        cursor: 'pointer', fontWeight: '600', fontSize: '0.85rem',
+                                                        boxShadow: '0 4px 6px -1px rgba(79, 70, 229, 0.2)'
+                                                    }}
+                                                >
+                                                    <Edit3 size={14} /> Edit Profile
+                                                </button>
+                                            </>
+                                        ) : (
+                                            <>
+                                                <button
+                                                    onClick={() => setEditing(false)}
+                                                    style={{
+                                                        padding: '0.5rem 1rem', backgroundColor: '#F8FAFC',
+                                                        color: '#475569', border: '1px solid #E2E8F0',
+                                                        borderRadius: '0.75rem', cursor: 'pointer', fontWeight: '600', fontSize: '0.85rem'
+                                                    }}
+                                                >
+                                                    Cancel
+                                                </button>
+                                                <button
+                                                    onClick={handleSave}
+                                                    disabled={saving}
+                                                    style={{
+                                                        padding: '0.5rem 1.25rem', backgroundColor: 'var(--secondary)',
+                                                        color: 'white', border: 'none', borderRadius: '0.75rem',
+                                                        cursor: 'pointer', fontWeight: '600', fontSize: '0.85rem',
+                                                        boxShadow: '0 4px 6px -1px rgba(16, 185, 129, 0.2)'
+                                                    }}
+                                                >
+                                                    {saving ? 'Updating...' : 'Update Profile'}
+                                                </button>
+                                            </>
+                                        )}
                                 </div>
                             </div>
                         </div>
-
-                        {/* Action Bar */}
-                        <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
-                             {!editing ? (
-                                <>
-                                    <button
-                                        onClick={() => {}} 
-                                        style={{
-                                            display: 'flex', alignItems: 'center', gap: '0.5rem',
-                                            padding: '0.625rem 1.25rem', backgroundColor: '#F8FAFC',
-                                            color: '#475569', border: '1px solid #E2E8F0', borderRadius: '0.75rem',
-                                            cursor: 'pointer', fontWeight: '600', fontSize: '0.875rem',
-                                            transition: 'all 0.2s'
-                                        }}
-                                    >
-                                        <PlayCircle size={16} /> View Profile
-                                    </button>
-                                    <button
-                                        onClick={() => window.open(profile.resume_link, '_blank')}
-                                        disabled={!profile.resume_link}
-                                        style={{
-                                            display: 'flex', alignItems: 'center', gap: '0.5rem',
-                                            padding: '0.625rem 1.25rem', backgroundColor: '#F8FAFC',
-                                            color: '#475569', border: '1px solid #E2E8F0', borderRadius: '0.75rem',
-                                            cursor: profile.resume_link ? 'pointer' : 'not-allowed', fontWeight: '600', fontSize: '0.875rem',
-                                            opacity: profile.resume_link ? 1 : 0.6
-                                        }}
-                                    >
-                                        <FileText size={16} /> Resume
-                                    </button>
-                                    <button
-                                        onClick={() => setEditing(true)}
-                                        style={{
-                                            display: 'flex', alignItems: 'center', gap: '0.5rem',
-                                            padding: '0.625rem 1.5rem', backgroundColor: 'var(--primary)',
-                                            color: 'white', border: 'none', borderRadius: '0.75rem',
-                                            cursor: 'pointer', fontWeight: '600', fontSize: '0.875rem',
-                                            boxShadow: '0 4px 6px -1px rgba(79, 70, 229, 0.2)'
-                                        }}
-                                    >
-                                        <Edit3 size={16} /> Edit Profile
-                                    </button>
-                                </>
-                            ) : (
-                                <>
-                                    <button
-                                        onClick={() => setEditing(false)}
-                                        style={{
-                                            padding: '0.625rem 1.25rem', backgroundColor: '#F8FAFC',
-                                            color: '#475569', border: '1px solid #E2E8F0',
-                                            borderRadius: '0.75rem', cursor: 'pointer', fontWeight: '600'
-                                        }}
-                                    >
-                                        Cancel
-                                    </button>
-                                    <button
-                                        onClick={handleSave}
-                                        disabled={saving}
-                                        style={{
-                                            padding: '0.625rem 1.5rem', backgroundColor: 'var(--secondary)',
-                                            color: 'white', border: 'none', borderRadius: '0.75rem',
-                                            cursor: 'pointer', fontWeight: '600',
-                                            boxShadow: '0 4px 6px -1px rgba(16, 185, 129, 0.2)'
-                                        }}
-                                    >
-                                        {saving ? 'Updating...' : 'Update Profile'}
-                                    </button>
-                                </>
-                            )}
-                        </div>
                     </div>
+                </div>
 
                     {saveMsg && (
                         <div style={{
@@ -493,19 +523,47 @@ const StudentProfile = () => {
                         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '2rem' }}>
                             <div>
                                 <h4 style={{ fontSize: '0.9rem', fontWeight: '800', color: '#64748B', textTransform: 'uppercase', marginBottom: '1.25rem', letterSpacing: '0.05em' }}>Key Skills</h4>
-                                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.625rem' }}>
-                                    {['React.js', 'Node.js', 'Python', 'Machine Learning', 'SQL', 'Git'].map(skill => (
+                                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.625rem', alignItems: 'center' }}>
+                                    {editForm.skills && editForm.skills.length > 0 ? editForm.skills.map(skill => (
                                         <span key={skill} style={{ 
                                             padding: '0.5rem 1rem', backgroundColor: '#F3F4F6', 
                                             color: '#374151', borderRadius: '2rem', fontSize: '0.875rem', 
-                                            fontWeight: '600', border: '1px solid #E5E7EB'
+                                            fontWeight: '600', border: '1px solid #E5E7EB', display: 'flex', alignItems: 'center', gap: '0.4rem'
                                         }}>
                                             {skill}
+                                            <X size={14} style={{ cursor: 'pointer', color: '#EF4444' }} onClick={() => handleUpdateSkills(editForm.skills.filter(s => s !== skill))} />
                                         </span>
-                                    ))}
-                                    <button style={{ padding: '0.5rem 1rem', backgroundColor: 'transparent', color: '#4F46E5', borderRadius: '2rem', fontSize: '0.875rem', fontWeight: '700', border: '1px dashed #4F46E5', cursor: 'pointer' }}>
-                                        + Add Skill
-                                    </button>
+                                    )) : <span style={{ fontSize: '0.875rem', color: '#9CA3AF' }}>No skills added yet</span>}
+                                    
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', background: '#F8FAFC', padding: '0.2rem', borderRadius: '2rem', border: '1px dashed #CBD5E1' }}>
+                                        <input 
+                                            type="text" 
+                                            value={newSkill} 
+                                            onChange={(e) => setNewSkill(e.target.value)} 
+                                            placeholder="Type a skill..." 
+                                            style={{ border: 'none', background: 'transparent', outline: 'none', padding: '0.3rem 0.5rem', fontSize: '0.85rem', width: '120px' }}
+                                            onKeyDown={(e) => {
+                                                if (e.key === 'Enter' && newSkill.trim() !== '') {
+                                                    e.preventDefault();
+                                                    if (!editForm.skills.includes(newSkill.trim())) {
+                                                        handleUpdateSkills([...editForm.skills, newSkill.trim()]);
+                                                    }
+                                                    setNewSkill('');
+                                                }
+                                            }}
+                                        />
+                                        <button 
+                                            onClick={() => {
+                                                if (newSkill.trim() !== '' && !editForm.skills.includes(newSkill.trim())) {
+                                                    handleUpdateSkills([...editForm.skills, newSkill.trim()]);
+                                                    setNewSkill('');
+                                                }
+                                            }}
+                                            style={{ padding: '0.3rem 0.6rem', backgroundColor: '#4F46E5', color: 'white', borderRadius: '2rem', fontSize: '0.75rem', fontWeight: '700', border: 'none', cursor: 'pointer' }}
+                                        >
+                                            + Add
+                                        </button>
+                                    </div>
                                 </div>
                             </div>
                             <div>

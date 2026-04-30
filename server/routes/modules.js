@@ -84,13 +84,59 @@ router.put('/:id', authenticateToken, authorizeRole('admin'), async (req, res) =
 
 // Admin: Delete Module
 router.delete('/:id', authenticateToken, authorizeRole('admin'), async (req, res) => {
+    const moduleId = req.params.id;
     try {
+        // 1. Delete submissions related to assignments in this module
+        await db.execute({
+            sql: "DELETE FROM submissions WHERE assignment_id IN (SELECT id FROM assignments WHERE module_id = ?)",
+            args: [moduleId]
+        });
+
+        // 2. Delete assignments in this module
+        await db.execute({
+            sql: "DELETE FROM assignments WHERE module_id = ?",
+            args: [moduleId]
+        });
+
+        // 3. Delete test results related to mock tests in this module
+        await db.execute({
+            sql: "DELETE FROM test_results WHERE test_id IN (SELECT id FROM mock_tests WHERE module_id = ?)",
+            args: [moduleId]
+        });
+
+        // 4. Delete questions related to mock tests in this module (if using questions table)
+        await db.execute({
+            sql: "DELETE FROM questions WHERE test_id IN (SELECT id FROM mock_tests WHERE module_id = ?)",
+            args: [moduleId]
+        });
+
+        // 5. Delete mock tests in this module
+        await db.execute({
+            sql: "DELETE FROM mock_tests WHERE module_id = ?",
+            args: [moduleId]
+        });
+
+        // 6. Delete related videos
+        await db.execute({
+            sql: "DELETE FROM videos WHERE module_id = ?",
+            args: [moduleId]
+        });
+
+        // 7. Delete related classes (live sessions)
+        await db.execute({
+            sql: "DELETE FROM classes WHERE module_id = ?",
+            args: [moduleId]
+        });
+
+        // 8. Finally delete the module (course_modules handles itself via CASCADE)
         await db.execute({
             sql: "DELETE FROM modules WHERE id = ?",
-            args: [req.params.id]
+            args: [moduleId]
         });
-        res.json({ message: "Module Deleted Successfully" });
+
+        res.json({ message: "Module and all related curriculum/assessments deleted successfully" });
     } catch (error) {
+        console.error("Delete module error:", error);
         res.status(500).json({ message: error.message });
     }
 });
@@ -141,13 +187,13 @@ router.get('/:id/assignments', authenticateToken, async (req, res) => {
 
 // Admin: Add Assignment to Module
 router.post('/:id/assignments', authenticateToken, authorizeRole('admin'), async (req, res) => {
-    const { title, description, due_date, type, problem_statement, starter_code, expected_output, difficulty, test_cases } = req.body;
+    const { title, description, due_date, type, problem_statement, starter_code, expected_output, difficulty, test_cases, course_id } = req.body;
     const moduleId = req.params.id;
 
     try {
         await db.execute({
-            sql: "INSERT INTO assignments (module_id, title, description, due_date, type, problem_statement, starter_code, expected_output, difficulty, test_cases) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
-            args: [moduleId, title, description, due_date, type || 'standard', problem_statement || null, starter_code || null, expected_output || null, difficulty || 'Easy', test_cases || '[]']
+            sql: "INSERT INTO assignments (module_id, course_id, title, description, due_date, type, problem_statement, starter_code, expected_output, difficulty, test_cases) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+            args: [moduleId, course_id || null, title, description, due_date, type || 'standard', problem_statement || null, starter_code || null, expected_output || null, difficulty || 'Easy', test_cases || '[]']
         });
         res.status(201).json({ message: "Assignment Added Successfully" });
     } catch (error) {
@@ -207,13 +253,13 @@ router.post('/:id/tests', authenticateToken, authorizeRole('admin'), async (req,
     console.log("POST /modules/:id/tests called");
     console.log("Params:", req.params);
     console.log("Body:", req.body);
-    const { title, duration, total_marks, type, questions } = req.body;
+    const { title, duration, total_marks, type, questions, course_id } = req.body;
     const moduleId = req.params.id;
 
     try {
         await db.execute({
-            sql: "INSERT INTO mock_tests (module_id, title, duration, total_marks, type, questions) VALUES (?, ?, ?, ?, ?, ?)",
-            args: [moduleId, title, duration, total_marks, type, JSON.stringify(questions)]
+            sql: "INSERT INTO mock_tests (module_id, course_id, title, duration, total_marks, type, questions) VALUES (?, ?, ?, ?, ?, ?, ?)",
+            args: [moduleId, course_id || null, title, duration, total_marks, type, JSON.stringify(questions)]
         });
         console.log("Mock test inserted successfully");
         res.status(201).json({ message: "Mock Test Added Successfully" });

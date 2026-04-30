@@ -23,6 +23,12 @@ const StudentCourseView = ({ courseId, onBack }) => {
     const [submissionLink, setSubmissionLink] = useState('');
     const [submitting, setSubmitting] = useState(false);
 
+    // Attendance and Certificates Data
+    const [attendanceData, setAttendanceData] = useState([]);
+    const [certificateData, setCertificateData] = useState(null);
+    const [certModalOpen, setCertModalOpen] = useState(false);
+    const [videoLink, setVideoLink] = useState('');
+
     useEffect(() => {
         const fetchDetails = async () => {
             try {
@@ -31,6 +37,21 @@ const StudentCourseView = ({ courseId, onBack }) => {
                 if (res.data.classes && res.data.classes.length > 0) {
                     setActiveVideo(res.data.classes[0]);
                 }
+                
+                // Fetch attendance specific to this course
+                try {
+                    const attRes = await api.get('/attendance/history/my');
+                    const courseAtt = attRes.data.filter(a => a.course_id === courseId);
+                    setAttendanceData(courseAtt);
+                } catch (e) { console.error(e); }
+                
+                // Fetch certificates specific to this course
+                try {
+                    const certRes = await api.get('/students/certificates');
+                    const courseCert = certRes.data.find(c => c.course_id === courseId);
+                    setCertificateData(courseCert || null);
+                } catch (e) { console.error(e); }
+
                 setLoading(false);
             } catch (error) {
                 console.error("Failed to fetch course details", error);
@@ -158,10 +179,33 @@ const StudentCourseView = ({ courseId, onBack }) => {
         }
     };
 
+    const handleRequestCertificate = async () => {
+        if (!videoLink.trim()) return alert("Please provide a video link.");
+        try {
+            setSubmitting(true);
+            await api.post('/students/certificates/request', { course_id: courseId, video_link: videoLink });
+            alert("Certificate requested successfully!");
+            setCertModalOpen(false);
+            setVideoLink('');
+            // refresh cert status
+            const certRes = await api.get('/students/certificates');
+            setCertificateData(certRes.data.find(c => c.course_id === courseId) || null);
+        } catch (error) {
+            alert("Failed to request certificate: " + error.message);
+        } finally {
+            setSubmitting(false);
+        }
+    };
+
     if (loading) return <div className="p-8 text-center">Loading course content...</div>;
     if (!courseData) return <div className="p-8 text-center">Course not found.</div>;
 
     const { course, classes, modules } = courseData;
+
+    // Calculate attendance metrics
+    const totalSessions = attendanceData.length;
+    const presentSessions = attendanceData.filter(a => a.status === 'present').length;
+    const attendancePercentage = totalSessions > 0 ? Math.round((presentSessions / totalSessions) * 100) : 0;
 
     // If a test is active, show the TestRunner
     if (activeTest) {
@@ -192,6 +236,8 @@ const StudentCourseView = ({ courseId, onBack }) => {
                     { key: 'modules', label: `Modules (${modules.length})` },
                     { key: 'assignments', label: `Assignments (${allAssignments.length})` },
                     { key: 'tests', label: `Tests (${allTests.length})` },
+                    { key: 'attendance', label: `Attendance (${attendancePercentage}%)` },
+                    { key: 'certificates', label: `Certificate` },
                 ].map(tab => (
                     <button
                         key={tab.key}
@@ -561,8 +607,127 @@ const StudentCourseView = ({ courseId, onBack }) => {
                     </Card>
                 </div>
             )}
+
+            {/* ── ATTENDANCE TAB ─────────────────────────────── */}
+            {activeTab === 'attendance' && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                    <Card style={{ background: 'linear-gradient(135deg, #EFF6FF, #DBEAFE)' }}>
+                        <h2 style={{ fontSize: '1.25rem', fontWeight: 'bold', color: '#1E3A8A' }}>Attendance Overview</h2>
+                        <div style={{ display: 'flex', gap: '2rem', marginTop: '1rem' }}>
+                            <div>
+                                <p style={{ color: '#64748B', fontSize: '0.875rem' }}>Total Sessions</p>
+                                <p style={{ fontSize: '1.5rem', fontWeight: '800' }}>{totalSessions}</p>
+                            </div>
+                            <div>
+                                <p style={{ color: '#64748B', fontSize: '0.875rem' }}>Present</p>
+                                <p style={{ fontSize: '1.5rem', fontWeight: '800', color: '#10B981' }}>{presentSessions}</p>
+                            </div>
+                            <div>
+                                <p style={{ color: '#64748B', fontSize: '0.875rem' }}>Percentage</p>
+                                <p style={{ fontSize: '1.5rem', fontWeight: '800', color: attendancePercentage >= 75 ? '#10B981' : '#EF4444' }}>{attendancePercentage}%</p>
+                            </div>
+                        </div>
+                    </Card>
+
+                    <h3 style={{ fontSize: '1.125rem', fontWeight: 'bold', marginTop: '1rem' }}>Session History</h3>
+                    {attendanceData.length > 0 ? (
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                            {attendanceData.map(record => (
+                                <Card key={record.id} style={{ padding: '1rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                    <div>
+                                        <p style={{ fontWeight: '600' }}>{record.topic}</p>
+                                        <p style={{ fontSize: '0.875rem', color: '#64748B' }}>{new Date(record.join_time).toLocaleString()}</p>
+                                    </div>
+                                    <span style={{ 
+                                        padding: '0.25rem 0.75rem', borderRadius: '1rem', fontSize: '0.75rem', fontWeight: 'bold', textTransform: 'uppercase',
+                                        backgroundColor: record.status === 'present' ? '#D1FAE5' : (record.status === 'partial' ? '#FEF3C7' : '#FEE2E2'),
+                                        color: record.status === 'present' ? '#059669' : (record.status === 'partial' ? '#D97706' : '#DC2626')
+                                    }}>
+                                        {record.status}
+                                    </span>
+                                </Card>
+                            ))}
+                        </div>
+                    ) : (
+                        <p style={{ color: '#64748B' }}>No attendance records found for this course.</p>
+                    )}
+                </div>
+            )}
+
+            {/* ── CERTIFICATES TAB ─────────────────────────────── */}
+            {activeTab === 'certificates' && (
+                <div>
+                    <Card style={{ textAlign: 'center', padding: '3rem' }}>
+                        <div style={{ width: '64px', height: '64px', borderRadius: '50%', background: '#FEF3C7', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 1rem' }}>
+                            <span style={{ fontSize: '2rem' }}>🎓</span>
+                        </div>
+                        <h2 style={{ fontSize: '1.5rem', fontWeight: 'bold', marginBottom: '0.5rem' }}>Course Completion Certificate</h2>
+                        
+                        {certificateData ? (
+                            <div>
+                                <p style={{ color: '#64748B', marginBottom: '1rem' }}>
+                                    Status: <strong style={{ color: certificateData.status === 'approved' ? '#10B981' : (certificateData.status === 'rejected' ? '#EF4444' : '#F59E0B') }}>{certificateData.status.toUpperCase()}</strong>
+                                </p>
+                                {certificateData.status === 'rejected' && certificateData.admin_feedback && (
+                                    <div style={{ background: '#FEF2F2', padding: '1rem', borderRadius: '0.5rem', marginBottom: '1rem', color: '#991B1B', textAlign: 'left' }}>
+                                        <strong>Rejection Reason:</strong> {certificateData.admin_feedback}
+                                    </div>
+                                )}
+                                {certificateData.status === 'approved' && (
+                                    <Button variant="primary">Download Certificate</Button>
+                                )}
+                                {certificateData.status === 'rejected' && (
+                                    <Button onClick={() => setCertModalOpen(true)}>Request Again</Button>
+                                )}
+                            </div>
+                        ) : (
+                            <div>
+                                <p style={{ color: '#64748B', marginBottom: '1.5rem' }}>
+                                    You have not requested a certificate for this course yet. Once you complete all modules, mock tests, and assignments, you can request your certificate.
+                                </p>
+                                <Button onClick={() => setCertModalOpen(true)}>Request Certificate</Button>
+                            </div>
+                        )}
+                    </Card>
+
+                    {certModalOpen && (
+                        <div style={{
+                            position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+                            backgroundColor: 'rgba(0,0,0,0.5)', zIndex: 1000,
+                            display: 'flex', justifyContent: 'center', alignItems: 'center',
+                            backdropFilter: 'blur(5px)'
+                        }}>
+                            <Card style={{ width: '100%', maxWidth: '500px', position: 'relative' }}>
+                                <button
+                                    onClick={() => setCertModalOpen(false)}
+                                    style={{ position: 'absolute', top: '1rem', right: '1rem', border: 'none', background: 'none', cursor: 'pointer', color: 'var(--text-light)' }}
+                                >
+                                    <X size={24} />
+                                </button>
+                                <h2 style={{ fontSize: '1.5rem', fontWeight: 'bold', marginBottom: '0.5rem' }}>Request Certificate</h2>
+                                <p style={{ color: 'var(--text-light)', marginBottom: '1rem' }}>Upload a short video introducing our institute, your trainer, and your review of the course.</p>
+                                
+                                <Input 
+                                    label="Video Link (Google Drive / YouTube)" 
+                                    placeholder="https://..."
+                                    value={videoLink}
+                                    onChange={(e) => setVideoLink(e.target.value)}
+                                />
+
+                                <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '1rem', marginTop: '1.5rem' }}>
+                                    <Button variant="ghost" onClick={() => setCertModalOpen(false)}>Cancel</Button>
+                                    <Button variant="primary" onClick={handleRequestCertificate} disabled={submitting}>
+                                        {submitting ? 'Submitting...' : 'Submit Request'}
+                                    </Button>
+                                </div>
+                            </Card>
+                        </div>
+                    )}
+                </div>
+            )}
         </div>
     );
+
 };
 
 export default StudentCourseView;

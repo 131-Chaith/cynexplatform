@@ -275,19 +275,25 @@ const AdminBatches = () => {
                                     <div style={{ padding: '0.75rem', backgroundColor: '#e0e7ff', borderRadius: '0.5rem', color: '#4f46e5' }}>
                                         <Users size={24} />
                                     </div>
-                                    <div style={{ display: 'flex', gap: '0.5rem' }}>
-                                        <button
-                                            onClick={() => handleEdit(batch)}
-                                            style={{ border: 'none', background: 'none', cursor: 'pointer', color: 'var(--gray)', padding: '0.25rem' }}
+                                    <div style={{ display: 'flex', gap: '0.5rem', position: 'relative', zIndex: 10 }}>
+                                        <motion.button
+                                            whileHover={{ scale: 1.2, color: '#4f46e5' }}
+                                            whileTap={{ scale: 0.9 }}
+                                            onClick={(e) => { e.stopPropagation(); handleEdit(batch); }}
+                                            style={{ border: 'none', background: 'none', cursor: 'pointer', color: '#94a3b8', padding: '0.5rem', borderRadius: '50%', transition: 'all 0.2s' }}
+                                            title="Edit Batch"
                                         >
-                                            <Edit2 size={16} />
-                                        </button>
-                                        <button
-                                            onClick={() => handleDelete(batch.id)}
-                                            style={{ border: 'none', background: 'none', cursor: 'pointer', color: '#ef4444', padding: '0.25rem' }}
+                                            <Edit2 size={18} />
+                                        </motion.button>
+                                        <motion.button
+                                            whileHover={{ scale: 1.2, backgroundColor: '#fee2e2' }}
+                                            whileTap={{ scale: 0.9 }}
+                                            onClick={(e) => { e.stopPropagation(); handleDelete(batch.id); }}
+                                            style={{ border: 'none', background: 'none', cursor: 'pointer', color: '#ef4444', padding: '0.5rem', borderRadius: '50%', transition: 'all 0.2s' }}
+                                            title="Delete Batch"
                                         >
-                                            <Trash2 size={16} />
-                                        </button>
+                                            <Trash2 size={18} />
+                                        </motion.button>
                                     </div>
                                 </div>
                                 <h3 style={{ fontSize: '1.4rem', fontWeight: '900', color: '#f8fafc', marginBottom: '0.75rem', letterSpacing: '-0.02em', textShadow: '0 0 10px rgba(255,255,255,0.1)' }}>
@@ -423,16 +429,32 @@ const AdminBatches = () => {
             {showModal && (
                 <div style={{
                     position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
-                    backgroundColor: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000
+                    backgroundColor: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000,
+                    backdropFilter: 'blur(10px)'
                 }}>
-                    <Card style={{ width: '100%', maxWidth: '400px', position: 'relative' }}>
+                    <Card style={{ 
+                        width: '100%', 
+                        maxWidth: '450px', 
+                        position: 'relative', 
+                        backgroundColor: '#ffffff', 
+                        borderRadius: '2rem', 
+                        padding: '3rem 2.5rem',
+                        boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
+                        border: 'none'
+                    }}>
                         <button
                             onClick={() => { setShowModal(false); setEditingBatch(null); }}
-                            style={{ position: 'absolute', top: '1rem', right: '1rem', border: 'none', background: 'none', cursor: 'pointer', color: 'var(--text-light)' }}
+                            style={{ 
+                                position: 'absolute', top: '1.5rem', right: '1.5rem', 
+                                border: 'none', background: 'rgba(0,0,0,0.05)', 
+                                cursor: 'pointer', color: '#000000',
+                                width: '32px', height: '32px', borderRadius: '50%',
+                                display: 'flex', alignItems: 'center', justifyContent: 'center'
+                            }}
                         >
-                            <X size={20} />
+                            <X size={18} />
                         </button>
-                        <h3 style={{ fontSize: '1.25rem', fontWeight: 'bold', marginBottom: '1.5rem' }}>
+                        <h3 style={{ fontSize: '1.75rem', fontWeight: '900', marginBottom: '1.5rem', color: '#000000', letterSpacing: '-0.025em' }}>
                             {editingBatch ? 'Edit Batch' : 'Create New Batch'}
                         </h3>
                         <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
@@ -468,20 +490,38 @@ const AdminBatches = () => {
             {assignStudentsModal.isOpen && (
                 <div style={{
                     position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
-                    backgroundColor: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000
+                    backgroundColor: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000,
+                    backdropFilter: 'blur(10px)'
                 }}>
-                    <Card style={{ width: '100%', maxWidth: '600px', position: 'relative', maxHeight: '80vh', overflowY: 'auto' }}>
+                    <Card style={{ 
+                        width: '100%', 
+                        maxWidth: '650px', 
+                        position: 'relative', 
+                        maxHeight: '85vh', 
+                        overflowY: 'auto',
+                        backgroundColor: '#ffffff',
+                        borderRadius: '2rem',
+                        padding: '3rem 2.5rem',
+                        boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
+                        border: 'none'
+                    }}>
                         <button
                             onClick={() => { setAssignStudentsModal({ isOpen: false, batchId: null, batchName: '' }); setCurrentBatchStudents([]); }}
-                            style={{ position: 'absolute', top: '1rem', right: '1rem', border: 'none', background: 'none', cursor: 'pointer', color: 'var(--text-light)' }}
+                            style={{ 
+                                position: 'absolute', top: '1.5rem', right: '1.5rem', 
+                                border: 'none', background: 'rgba(0,0,0,0.05)', 
+                                cursor: 'pointer', color: '#000000',
+                                width: '32px', height: '32px', borderRadius: '50%',
+                                display: 'flex', alignItems: 'center', justifyContent: 'center'
+                            }}
                         >
-                            <X size={20} />
+                            <X size={18} />
                         </button>
-                        <h3 style={{ fontSize: '1.25rem', fontWeight: 'bold', marginBottom: '0.5rem' }}>
-                            Assign Students to Batch
+                        <h3 style={{ fontSize: '1.75rem', fontWeight: '900', marginBottom: '0.5rem', color: '#000000', letterSpacing: '-0.025em' }}>
+                            Assign Students
                         </h3>
-                        <p style={{ color: 'var(--text-light)', marginBottom: '1.5rem', fontSize: '0.875rem' }}>
-                            Batch: <strong>{assignStudentsModal.batchName}</strong>
+                        <p style={{ color: '#64748B', marginBottom: '2rem', fontSize: '1rem', fontWeight: '500' }}>
+                            Squadron Identification: <strong style={{ color: '#4F46E5' }}>{assignStudentsModal.batchName}</strong>
                         </p>
 
                         {/* Currently Assigned Students */}
@@ -564,20 +604,38 @@ const AdminBatches = () => {
             {assignCoursesModal.isOpen && (
                 <div style={{
                     position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
-                    backgroundColor: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000
+                    backgroundColor: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000,
+                    backdropFilter: 'blur(10px)'
                 }}>
-                    <Card style={{ width: '100%', maxWidth: '600px', position: 'relative', maxHeight: '80vh', overflowY: 'auto' }}>
+                    <Card style={{ 
+                        width: '100%', 
+                        maxWidth: '650px', 
+                        position: 'relative', 
+                        maxHeight: '85vh', 
+                        overflowY: 'auto',
+                        backgroundColor: '#ffffff',
+                        borderRadius: '2rem',
+                        padding: '3rem 2.5rem',
+                        boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
+                        border: 'none'
+                    }}>
                         <button
                             onClick={() => { setAssignCoursesModal({ isOpen: false, batchId: null, batchName: '' }); setCurrentBatchCourses([]); }}
-                            style={{ position: 'absolute', top: '1rem', right: '1rem', border: 'none', background: 'none', cursor: 'pointer', color: 'var(--text-light)' }}
+                            style={{ 
+                                position: 'absolute', top: '1.5rem', right: '1.5rem', 
+                                border: 'none', background: 'rgba(0,0,0,0.05)', 
+                                cursor: 'pointer', color: '#000000',
+                                width: '32px', height: '32px', borderRadius: '50%',
+                                display: 'flex', alignItems: 'center', justifyContent: 'center'
+                            }}
                         >
-                            <X size={20} />
+                            <X size={18} />
                         </button>
-                        <h3 style={{ fontSize: '1.25rem', fontWeight: 'bold', marginBottom: '0.5rem' }}>
-                            Assign Courses to Batch
+                        <h3 style={{ fontSize: '1.75rem', fontWeight: '900', marginBottom: '0.5rem', color: '#000000', letterSpacing: '-0.025em' }}>
+                            Map Curriculum
                         </h3>
-                        <p style={{ color: 'var(--text-light)', marginBottom: '1.5rem', fontSize: '0.875rem' }}>
-                            Batch: <strong>{assignCoursesModal.batchName}</strong>
+                        <p style={{ color: '#64748B', marginBottom: '2rem', fontSize: '1rem', fontWeight: '500' }}>
+                            Squadron Identification: <strong style={{ color: '#FB923C' }}>{assignCoursesModal.batchName}</strong>
                         </p>
 
                         {/* Currently Assigned Courses */}
@@ -661,23 +719,23 @@ const AdminBatches = () => {
             {viewStudentsModal.isOpen && (
                 <div style={{
                     position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
-                    backgroundColor: 'rgba(2, 6, 23, 0.8)', backdropFilter: 'blur(10px)', 
+                    backgroundColor: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(10px)', 
                     display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000
                 }}>
                     <motion.div 
                         initial={{ opacity: 0, scale: 0.9, y: 30 }}
                         animate={{ opacity: 1, scale: 1, y: 0 }}
-                        style={{ width: '100%', maxWidth: '800px', maxHeight: '85vh', position: 'relative' }}
+                        style={{ width: '100%', maxWidth: '850px', maxHeight: '85vh', position: 'relative' }}
                     >
-                        <Card style={{ backgroundColor: '#0F172A', border: '1px solid #1E293B', padding: '0', display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden', boxShadow: '0 30px 60px -12px rgba(0,0,0,0.5)' }}>
-                            <div style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '4px', background: 'linear-gradient(90deg, #38bdf8, #c084fc)' }} />
+                        <Card style={{ backgroundColor: '#ffffff', border: 'none', padding: '0', display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden', boxShadow: '0 30px 60px -12px rgba(0,0,0,0.3)', borderRadius: '2.5rem' }}>
+                            <div style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '8px', background: 'linear-gradient(90deg, #38bdf8, #4f46e5)' }} />
                             
-                            <div style={{ padding: '2rem', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                            <div style={{ padding: '3rem 2.5rem 2rem', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                                 <div>
-                                    <h3 style={{ fontSize: '1.5rem', fontWeight: '900', color: '#F8FAFC', letterSpacing: '-0.025em' }}>
-                                        {viewStudentsModal.batchName} Operatives
+                                    <h3 style={{ fontSize: '2rem', fontWeight: '900', color: '#000000', letterSpacing: '-0.025em' }}>
+                                        Squadron Personnel
                                     </h3>
-                                    <p style={{ color: '#64748B', fontSize: '0.875rem' }}>Active student personnel assigned to this squadron.</p>
+                                    <p style={{ color: '#64748B', fontSize: '1rem', fontWeight: '500' }}>Active operatives in <strong style={{ color: '#4f46e5' }}>{viewStudentsModal.batchName}</strong>.</p>
                                 </div>
                                 <button
                                     onClick={() => { setViewStudentsModal({ isOpen: false, batchId: null, batchName: '' }); setCurrentBatchStudents([]); }}
@@ -744,23 +802,23 @@ const AdminBatches = () => {
             {viewCoursesModal.isOpen && (
                 <div style={{
                     position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
-                    backgroundColor: 'rgba(2, 6, 23, 0.8)', backdropFilter: 'blur(10px)', 
+                    backgroundColor: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(10px)', 
                     display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000
                 }}>
                     <motion.div 
                         initial={{ opacity: 0, scale: 0.9, y: 30 }}
                         animate={{ opacity: 1, scale: 1, y: 0 }}
-                        style={{ width: '100%', maxWidth: '600px', maxHeight: '80vh', position: 'relative' }}
+                        style={{ width: '100%', maxWidth: '650px', maxHeight: '80vh', position: 'relative' }}
                     >
-                        <Card style={{ backgroundColor: '#0F172A', border: '1px solid #1E293B', padding: '0', display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden', boxShadow: '0 30px 60px -12px rgba(0,0,0,0.5)' }}>
-                            <div style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '4px', background: 'linear-gradient(90deg, #fb923c, #fb7185)' }} />
+                        <Card style={{ backgroundColor: '#ffffff', border: 'none', padding: '0', display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden', boxShadow: '0 30px 60px -12px rgba(0,0,0,0.3)', borderRadius: '2.5rem' }}>
+                            <div style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '8px', background: 'linear-gradient(90deg, #fb923c, #fb7185)' }} />
                             
-                            <div style={{ padding: '2rem', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                            <div style={{ padding: '3rem 2.5rem 2rem', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                                 <div>
-                                    <h3 style={{ fontSize: '1.5rem', fontWeight: '900', color: '#F8FAFC', letterSpacing: '-0.025em' }}>
-                                        {viewCoursesModal.batchName} Curriculum
+                                    <h3 style={{ fontSize: '2rem', fontWeight: '900', color: '#000000', letterSpacing: '-0.025em' }}>
+                                        Curriculum Map
                                     </h3>
-                                    <p style={{ color: '#64748B', fontSize: '0.875rem' }}>Academic programs and modules assigned to this batch.</p>
+                                    <p style={{ color: '#64748B', fontSize: '1rem', fontWeight: '500' }}>Modules assigned to <strong style={{ color: '#fb923c' }}>{viewCoursesModal.batchName}</strong>.</p>
                                 </div>
                                 <button
                                     onClick={() => { setViewCoursesModal({ isOpen: false, batchId: null, batchName: '' }); setCurrentBatchCourses([]); }}

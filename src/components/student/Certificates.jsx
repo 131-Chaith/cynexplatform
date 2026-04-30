@@ -3,18 +3,24 @@ import api from '../../services/api';
 import Card from '../Card';
 import Button from '../Button';
 import Input from '../Input';
-import { Award, Video, UploadCloud, CheckCircle, AlertCircle, X, Clock } from 'lucide-react';
+import { Award, Video, UploadCloud, CheckCircle, AlertCircle, X, Clock, Download, ExternalLink, ShieldCheck } from 'lucide-react';
+import { jsPDF } from 'jspdf';
+import html2canvas from 'html2canvas';
+import { useAuth } from '../../context/AuthContext';
 
 const Certificates = () => {
+    const { currentUser } = useAuth();
     const [enrolledCourses, setEnrolledCourses] = useState([]);
     const [myRequests, setMyRequests] = useState([]);
     const [myCertificates, setMyCertificates] = useState([]);
     const [loading, setLoading] = useState(true);
+    const [downloading, setDownloading] = useState(null); // Track which cert is downloading
     const [showRequestModal, setShowRequestModal] = useState(false);
     const [selectedCourseId, setSelectedCourseId] = useState(null);
     const [videoLink, setVideoLink] = useState('');
     const [videoFile, setVideoFile] = useState(null);
     const fileInputRef = useRef(null);
+    const certificateTemplateRef = useRef(null);
 
     useEffect(() => {
         fetchAll();
@@ -40,10 +46,10 @@ const Certificates = () => {
     // Build the course status by merging enrollments, certs, and requests
     const coursesWithStatus = enrolledCourses.map(course => {
         const cert = myCertificates.find(c => c.course_id === course.id);
-        if (cert) return { ...course, status: 'issued', issue_date: cert.issued_at || cert.created_at };
+        if (cert) return { ...course, status: 'issued', issue_date: cert.issue_date || cert.issued_at || cert.created_at || new Date().toISOString() };
 
         const req = myRequests.find(r => r.course_id === course.id);
-        if (req) return { ...course, status: req.status === 'rejected' ? 'rejected' : 'pending', request_date: req.created_at };
+        if (req) return { ...course, status: req.status === 'rejected' ? 'rejected' : 'pending', request_date: req.created_at, admin_feedback: req.admin_feedback };
 
         return { ...course, status: 'available' };
     });
@@ -87,7 +93,7 @@ const Certificates = () => {
     };
 
     const handleSubmitRequest = async () => {
-        if (!videoFile && !videoLink) return alert('Please provide a video link or upload a file.');
+        if (!videoFile) return alert('Please upload a video before submitting.');
         if (videoLink === 'mock_video_upload.mp4' && !videoFile) {
             // Special handle for simulate if we want to bypass duration check
         }
@@ -98,8 +104,6 @@ const Certificates = () => {
         
         if (videoFile) {
             formData.append('video', videoFile);
-        } else if (videoLink) {
-            formData.append('video_link', videoLink);
         }
 
         try {
@@ -121,7 +125,48 @@ const Certificates = () => {
         }
     };
 
-    if (loading) return <p>Loading certificates...</p>;
+    const handleDownloadPDF = async (cert) => {
+        setDownloading(cert.id);
+        try {
+            // Give time for the hidden template to render with correct data
+            setTimeout(async () => {
+                const element = document.getElementById(`cert-template-${cert.id}`);
+                if (!element) {
+                    console.error("Template not found");
+                    setDownloading(null);
+                    return;
+                }
+
+                const canvas = await html2canvas(element, {
+                    scale: 3, // High quality
+                    useCORS: true,
+                    logging: false,
+                    backgroundColor: '#ffffff'
+                });
+
+                const imgData = canvas.toDataURL('image/png');
+                const pdf = new jsPDF({
+                    orientation: 'landscape',
+                    unit: 'px',
+                    format: [canvas.width / 3, canvas.height / 3]
+                });
+
+                pdf.addImage(imgData, 'PNG', 0, 0, canvas.width / 3, canvas.height / 3);
+                pdf.save(`Certificate_${cert.title.replace(/\s+/g, '_')}.pdf`);
+                setDownloading(null);
+            }, 100);
+        } catch (error) {
+            console.error('PDF Generation Error:', error);
+            alert('Failed to generate PDF. Please try again.');
+            setDownloading(null);
+        }
+    };
+
+    if (loading) return (
+        <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '300px' }}>
+            <div className="animate-spin" style={{ width: '40px', height: '40px', border: '4px solid #f3f3f3', borderTop: '4px solid #6366F1', borderRadius: '50%' }}></div>
+        </div>
+    );
 
     return (
         <div>
@@ -217,10 +262,119 @@ const Certificates = () => {
                                             <CheckCircle size={14} style={{ color: '#10B981' }} />
                                             <span>Awarded on {new Date(cert.issue_date).toLocaleDateString()}</span>
                                         </div>
-                                        <Button variant="primary" style={{ width: '100%', borderRadius: '12px', fontWeight: '800', backgroundColor: '#1E1B4B' }}
-                                            onClick={() => alert('PDF generation in progress...')}>
-                                            VIEW CERTIFICATE
+                                        <Button 
+                                            variant="primary" 
+                                            style={{ 
+                                                width: '100%', 
+                                                borderRadius: '12px', 
+                                                fontWeight: '800', 
+                                                backgroundColor: '#1E1B4B',
+                                                display: 'flex',
+                                                alignItems: 'center',
+                                                justifyContent: 'center',
+                                                gap: '0.5rem'
+                                            }}
+                                            disabled={downloading === cert.id}
+                                            onClick={() => handleDownloadPDF(cert)}
+                                        >
+                                            {downloading === cert.id ? (
+                                                <>
+                                                    <div className="spinner-mini" style={{ width: '16px', height: '16px', border: '2px solid rgba(255,255,255,0.3)', borderTop: '2px solid white', borderRadius: '50%', animation: 'spin 1s linear infinite' }}></div>
+                                                    GENERATING...
+                                                </>
+                                            ) : (
+                                                <>
+                                                    <Download size={18} />
+                                                    DOWNLOAD PDF
+                                                </>
+                                            )}
                                         </Button>
+                                        
+                                        {/* Hidden Template for PDF Generation */}
+                                        <div style={{ position: 'absolute', left: '-9999px', top: '-9999px' }}>
+                                            <div 
+                                                id={`cert-template-${cert.id}`}
+                                                style={{
+                                                    width: '1000px',
+                                                    height: '700px',
+                                                    padding: '40px',
+                                                    background: 'white',
+                                                    position: 'relative',
+                                                    display: 'flex',
+                                                    flexDirection: 'column',
+                                                    alignItems: 'center',
+                                                    justifyContent: 'center',
+                                                    fontFamily: "'Inter', sans-serif",
+                                                    color: '#1E293B',
+                                                    overflow: 'hidden'
+                                                }}
+                                            >
+                                                {/* Fancy Border */}
+                                                <div style={{ position: 'absolute', top: '10px', left: '10px', right: '10px', bottom: '10px', border: '2px solid #1E1B4B', pointerEvents: 'none' }} />
+                                                <div style={{ position: 'absolute', top: '20px', left: '20px', right: '20px', bottom: '20px', border: '1px solid #6366F1', opacity: 0.3, pointerEvents: 'none' }} />
+                                                
+                                                {/* Background Watermark */}
+                                                <div style={{ position: 'absolute', opacity: 0.03, zIndex: 0 }}>
+                                                    <Award size={400} color="#1E1B4B" />
+                                                </div>
+
+                                                {/* Content */}
+                                                <div style={{ zIndex: 1, textAlign: 'center', width: '100%' }}>
+                                                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '1rem', marginBottom: '2rem' }}>
+                                                        <div style={{ width: '50px', height: '50px', background: '#1E1B4B', borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white' }}>
+                                                            <Award size={30} />
+                                                        </div>
+                                                        <h2 style={{ fontSize: '1.5rem', fontWeight: '900', color: '#1E1B4B', letterSpacing: '2px' }}>CYNEX AI ACADEMY</h2>
+                                                    </div>
+
+                                                    <h1 style={{ fontSize: '3.5rem', fontWeight: '900', color: '#1E293B', margin: '1rem 0' }}>CERTIFICATE</h1>
+                                                    <h3 style={{ fontSize: '1.25rem', fontWeight: '600', color: '#64748B', letterSpacing: '4px', textTransform: 'uppercase', marginBottom: '3rem' }}>OF APPRECIATION</h3>
+
+                                                    <p style={{ fontSize: '1.2rem', color: '#475569', marginBottom: '1rem' }}>This is to certify that</p>
+                                                    <h2 style={{ fontSize: '2.5rem', fontWeight: '900', color: '#6366F1', textDecoration: 'underline', marginBottom: '1.5rem' }}>
+                                                        {currentUser?.name?.toUpperCase() || 'VALUED STUDENT'}
+                                                    </h2>
+
+                                                    <p style={{ fontSize: '1.2rem', color: '#475569', maxWidth: '700px', margin: '0 auto 3rem', lineHeight: '1.6' }}>
+                                                        has successfully completed the comprehensive training program in <br/>
+                                                        <strong style={{ color: '#1E1B4B', fontSize: '1.5rem' }}>{cert.title}</strong><br/>
+                                                        demonstrating exceptional proficiency and dedication to the field of AI and modern technology.
+                                                    </p>
+
+                                                    <div style={{ display: 'flex', justifyContent: 'space-around', alignItems: 'flex-end', width: '100%', marginTop: '2rem' }}>
+                                                        <div style={{ textAlign: 'center' }}>
+                                                            <div style={{ width: '200px', borderBottom: '1px solid #CBD5E1', marginBottom: '0.5rem' }}></div>
+                                                            <p style={{ fontSize: '0.9rem', color: '#64748B', fontWeight: '700' }}>DATE OF ISSUE</p>
+                                                            <p style={{ fontSize: '1rem', color: '#1E293B', fontWeight: '800' }}>{new Date(cert.issue_date).toLocaleDateString()}</p>
+                                                        </div>
+                                                        
+                                                        <div style={{ position: 'relative' }}>
+                                                            <div style={{ position: 'absolute', top: '-60px', left: '50%', transform: 'translateX(-50%)', opacity: 0.8 }}>
+                                                                <ShieldCheck size={80} color="#6366F1" />
+                                                            </div>
+                                                            <div style={{ width: '150px', height: '150px', border: '4px double #E2E8F0', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                                                <div style={{ textAlign: 'center' }}>
+                                                                    <p style={{ fontSize: '0.7rem', fontWeight: '900', color: '#6366F1' }}>VERIFIED</p>
+                                                                    <p style={{ fontSize: '0.6rem', color: '#94A3B8' }}>{cert.id.toString().padStart(8, '0')}</p>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+
+                                                        <div style={{ textAlign: 'center' }}>
+                                                            <div style={{ width: '200px', borderBottom: '1px solid #CBD5E1', marginBottom: '0.5rem' }}>
+                                                                <span style={{ fontFamily: "'Dancing Script', cursive", fontSize: '1.5rem', color: '#1E1B4B' }}>Cynex Admin</span>
+                                                            </div>
+                                                            <p style={{ fontSize: '0.9rem', color: '#64748B', fontWeight: '700' }}>DIRECTOR OF EDUCATION</p>
+                                                            <p style={{ fontSize: '0.7rem', color: '#94A3B8' }}>CYNEX AI TECHNOLOGIES</p>
+                                                        </div>
+                                                    </div>
+                                                </div>
+
+                                                {/* Corner Accents */}
+                                                <div style={{ position: 'absolute', top: 0, left: 0, width: '150px', height: '150px', background: 'linear-gradient(135deg, #1E1B4B 0%, transparent 70%)', opacity: 0.1 }} />
+                                                <div style={{ position: 'absolute', bottom: 0, right: 0, width: '150px', height: '150px', background: 'linear-gradient(315deg, #6366F1 0%, transparent 70%)', opacity: 0.1 }} />
+                                            </div>
+                                        </div>
                                     </div>
                                 ) : cert.status === 'pending' ? (
                                     <div style={{
@@ -241,9 +395,25 @@ const Certificates = () => {
                                             textAlign: 'center', fontSize: '0.85rem',
                                             fontWeight: '700',
                                             display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem',
-                                            border: '1px solid #FEE2E2'
+                                            border: '1px solid #FEE2E2',
+                                            flexDirection: 'column'
                                         }}>
-                                            <AlertCircle size={16} /> SUBMISSION REJECTED
+                                            <div style={{display:'flex', alignItems:'center', gap:'0.5rem', marginBottom: '0.5rem'}}><AlertCircle size={16} /> SUBMISSION REJECTED</div>
+                                            {cert.admin_feedback && (
+                                                <div style={{ 
+                                                    fontSize: '0.8rem', 
+                                                    fontWeight:'500', 
+                                                    backgroundColor: 'rgba(0,0,0,0.03)', 
+                                                    padding: '0.75rem', 
+                                                    borderRadius: '8px',
+                                                    width: '100%',
+                                                    textAlign: 'left',
+                                                    borderLeft: '4px solid #EF4444'
+                                                }}>
+                                                    <strong style={{ display: 'block', marginBottom: '0.25rem', color: '#B91C1C' }}>Instructions from Admin:</strong>
+                                                    {cert.admin_feedback}
+                                                </div>
+                                            )}
                                         </div>
                                         <Button variant="primary" style={{ width: '100%', borderRadius: '12px', fontWeight: '800' }} onClick={() => handleOpenRequest(cert.id)}>
                                             REBUILD & RE-SUBMIT
@@ -280,46 +450,79 @@ const Certificates = () => {
             {showRequestModal && (
                 <div style={{
                     position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
-                    backgroundColor: 'rgba(0,0,0,0.5)', zIndex: 1000,
+                    backgroundColor: 'rgba(0,0,0,0.4)', zIndex: 1000,
                     display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    backdropFilter: 'blur(4px)'
+                    backdropFilter: 'blur(10px)', padding: '1.5rem'
                 }}>
-                    <Card style={{ width: '100%', maxWidth: '500px', margin: '2rem', position: 'relative' }}>
+                    <Card style={{ 
+                        width: '100%', 
+                        maxWidth: '550px', 
+                        backgroundColor: '#ffffff',
+                        borderRadius: '2rem',
+                        boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.15)',
+                        position: 'relative',
+                        padding: '3rem 2.5rem',
+                        textAlign: 'center',
+                        border: 'none'
+                    }}>
                         <button
                             onClick={() => setShowRequestModal(false)}
-                            style={{ position: 'absolute', top: '1rem', right: '1rem', border: 'none', background: 'none', cursor: 'pointer', color: 'var(--text-light)' }}
+                            style={{ 
+                                position: 'absolute', top: '1.5rem', right: '1.5rem', 
+                                border: 'none', background: 'rgba(0,0,0,0.05)', 
+                                cursor: 'pointer', color: '#000000',
+                                width: '32px', height: '32px', borderRadius: '50%',
+                                display: 'flex', alignItems: 'center', justifyContent: 'center'
+                            }}
                         >
-                            <X size={24} />
+                            <X size={18} />
                         </button>
 
-                        <h2 style={{ fontSize: '1.5rem', fontWeight: 'bold', marginBottom: '1rem' }}>Request Certificate</h2>
-
-                        <div style={{ marginBottom: '1.5rem', padding: '1rem', backgroundColor: 'var(--primary-light)', borderRadius: '0.5rem', display: 'flex', gap: '1rem' }}>
-                            <Video color="var(--primary)" size={32} style={{ flexShrink: 0 }} />
-                            <div>
-                                <h4 style={{ fontWeight: '600', color: 'var(--primary)', marginBottom: '0.25rem' }}>Video Verification Required</h4>
-                                <p style={{ fontSize: '0.875rem', color: 'var(--text)' }}>
-                                    Please record a short video sharing your learning experience to unlock your certificate.
-                                </p>
-                            </div>
+                        <div style={{ 
+                            width: '64px', height: '64px', backgroundColor: '#F3F4F6', 
+                            borderRadius: '1.25rem', display: 'flex', alignItems: 'center', 
+                            justifyContent: 'center', color: '#3B82F6', margin: '0 auto 1.5rem'
+                        }}>
+                            <Video size={32} />
                         </div>
 
-                        <div style={{ marginBottom: '1.5rem' }}>
-                            <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', color: 'var(--text)' }}>
-                                Video URL / File Name
+                        <h2 style={{ fontSize: '1.75rem', fontWeight: '900', color: '#000000', marginBottom: '0.75rem', letterSpacing: '-0.025em' }}>
+                            Request Certificate
+                        </h2>
+                        
+                        <p style={{ color: '#4B5563', fontSize: '0.95rem', marginBottom: '2rem', lineHeight: '1.6' }}>
+                            To verify your achievements, please upload a short video (min 30s) introducing yourself and sharing your experience with the course.
+                        </p>
+
+                        <div style={{ marginBottom: '2.5rem', textAlign: 'left' }}>
+                            <label style={{ display: 'block', marginBottom: '0.75rem', fontWeight: '700', color: '#000000', fontSize: '0.875rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                                Verification Media
                             </label>
-                            <Input
-                                placeholder="https://drive.google.com/..."
-                                value={videoLink}
-                                onChange={(e) => {
-                                    setVideoLink(e.target.value);
-                                    if (videoFile) setVideoFile(null); // Clear file if user types manually
+                            
+                            <div 
+                                onClick={() => fileInputRef.current.click()}
+                                style={{ 
+                                    border: '2px dashed #E5E7EB', 
+                                    borderRadius: '1.25rem', 
+                                    padding: '2rem', 
+                                    cursor: 'pointer',
+                                    transition: 'all 0.2s',
+                                    backgroundColor: '#F9FAFB'
                                 }}
-                            />
-                            <div style={{ marginTop: '0.5rem', display: 'flex', gap: '0.5rem' }}>
-                                <Button size="small" variant="outline" onClick={() => fileInputRef.current.click()}>
-                                    <UploadCloud size={14} style={{ marginRight: '0.4rem' }} /> Import from gallery
-                                </Button>
+                                onMouseEnter={(e) => { e.currentTarget.style.borderColor = '#3B82F6'; e.currentTarget.style.backgroundColor = '#EFF6FF'; }}
+                                onMouseLeave={(e) => { e.currentTarget.style.borderColor = '#E5E7EB'; e.currentTarget.style.backgroundColor = '#F9FAFB'; }}
+                            >
+                                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.75rem' }}>
+                                    <UploadCloud size={32} color={videoFile ? "#10B981" : "#9CA3AF"} />
+                                    <span style={{ fontSize: '0.875rem', color: '#6B7280', fontWeight: '600' }}>
+                                        {videoFile ? videoFile.name : "Click to select or drag video file"}
+                                    </span>
+                                    {videoFile && (
+                                        <span style={{ fontSize: '0.75rem', color: '#10B981', fontWeight: '700' }}>
+                                            {(videoFile.size / (1024 * 1024)).toFixed(2)} MB - READY
+                                        </span>
+                                    )}
+                                </div>
                                 <input 
                                     type="file" 
                                     ref={fileInputRef} 
@@ -327,20 +530,37 @@ const Certificates = () => {
                                     accept="video/*" 
                                     onChange={handleFileChange} 
                                 />
-                                <Button size="small" variant="ghost" onClick={() => setVideoLink('mock_video_upload.mp4')}>
-                                    Simulate
-                                </Button>
                             </div>
-                            {videoFile && (
-                                <p style={{ fontSize: '0.75rem', color: '#059669', marginTop: '0.5rem' }}>
-                                    ✓ Ready to upload: {videoFile.name} ({(videoFile.size / (1024 * 1024)).toFixed(2)} MB)
-                                </p>
-                            )}
                         </div>
 
-                        <div style={{ display: 'flex', gap: '1rem', justifyContent: 'flex-end' }}>
-                            <Button variant="ghost" onClick={() => setShowRequestModal(false)}>Cancel</Button>
-                            <Button onClick={handleSubmitRequest}>Submit Request</Button>
+                        <div style={{ display: 'flex', gap: '1rem' }}>
+                            <Button 
+                                variant="ghost" 
+                                style={{ flex: 1, height: '3.5rem', borderRadius: '1rem', fontWeight: '700', color: '#6B7280' }}
+                                onClick={() => setShowRequestModal(false)}
+                            >
+                                Cancel
+                            </Button>
+                            <button 
+                                onClick={handleSubmitRequest}
+                                style={{ 
+                                    flex: 2,
+                                    height: '3.5rem',
+                                    borderRadius: '1rem',
+                                    border: 'none',
+                                    background: 'linear-gradient(135deg, #3B82F6 0%, #8B5CF6 100%)',
+                                    color: '#ffffff',
+                                    fontWeight: '800',
+                                    fontSize: '1rem',
+                                    cursor: 'pointer',
+                                    boxShadow: '0 10px 15px -3px rgba(59, 130, 246, 0.3)',
+                                    transition: 'transform 0.2s'
+                                }}
+                                onMouseEnter={(e) => e.target.style.transform = 'scale(1.02)'}
+                                onMouseLeave={(e) => e.target.style.transform = 'scale(1)'}
+                            >
+                                Submit Request
+                            </button>
                         </div>
                     </Card>
                 </div>

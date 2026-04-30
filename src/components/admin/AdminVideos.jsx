@@ -285,46 +285,62 @@ const AdminVideos = () => {
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: '1.5rem' }}>
                     {filteredVideos.map(video => {
                         const videoId = getYouTubeVideoId(video.youtube_url);
-                        const thumbnail = videoId ? `https://img.youtube.com/vi/${videoId}/hqdefault.jpg` : null;
                         const isPlaying = playingVideoId === video.id;
 
                         return (
                             <Card key={video.id}>
-                                {videoId && (
-                                    <div style={{ position: 'relative', marginBottom: '1rem', borderRadius: '0.5rem', overflow: 'hidden', backgroundColor: '#000', paddingTop: '56.25%' }}>
-                                        {isPlaying ? (
-                                            <iframe
-                                                src={`https://www.youtube.com/embed/${videoId}?autoplay=1`}
-                                                title={video.title}
-                                                style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', border: 'none' }}
-                                                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                                                allowFullScreen
-                                            />
-                                        ) : (
-                                            <>
+                                <div style={{ position: 'relative', marginBottom: '1rem', borderRadius: '0.5rem', overflow: 'hidden', backgroundColor: '#0F172A', paddingTop: '56.25%' }}>
+                                    {isPlaying && videoId ? (
+                                        <iframe
+                                            src={`https://www.youtube.com/embed/${videoId}?autoplay=1`}
+                                            title={video.title}
+                                            style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', border: 'none' }}
+                                            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                                            allowFullScreen
+                                        />
+                                    ) : (
+                                        <div 
+                                            onClick={() => videoId && setPlayingVideoId(video.id)}
+                                            style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', cursor: videoId ? 'pointer' : 'default' }}
+                                        >
+                                            {videoId ? (
                                                 <img
-                                                    src={thumbnail}
+                                                    src={`https://img.youtube.com/vi/${videoId}/hqdefault.jpg`}
                                                     alt={video.title}
-                                                    style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', objectFit: 'cover' }}
+                                                    onError={(e) => {
+                                                        e.target.onerror = null;
+                                                        e.target.src = 'https://images.unsplash.com/photo-1611162617213-7d7a39e9b1d7?q=80&w=1000&auto=format&fit=crop'; // High quality fallback
+                                                    }}
+                                                    style={{ width: '100%', height: '100%', objectFit: 'cover' }}
                                                 />
+                                            ) : (
+                                                <div style={{ 
+                                                    width: '100%', height: '100%', 
+                                                    background: 'linear-gradient(135deg, #1e293b 0%, #0f172a 100%)',
+                                                    display: 'flex', alignItems: 'center', justifyContent: 'center'
+                                                }}>
+                                                    <Youtube size={48} color="#ef4444" style={{ opacity: 0.5 }} />
+                                                </div>
+                                            )}
+                                            
+                                            {videoId && (
                                                 <div style={{
                                                     position: 'absolute',
                                                     top: '50%',
                                                     left: '50%',
                                                     transform: 'translate(-50%, -50%)',
                                                     backgroundColor: 'rgba(0,0,0,0.7)',
+                                                    backdropFilter: 'blur(4px)',
                                                     borderRadius: '50%',
                                                     padding: '1rem',
-                                                    cursor: 'pointer'
-                                                }}
-                                                    onClick={() => setPlayingVideoId(video.id)}
-                                                >
-                                                    <Play size={32} color="white" />
+                                                    border: '1px solid rgba(255,255,255,0.2)'
+                                                }}>
+                                                    <Play size={24} color="white" fill="white" />
                                                 </div>
-                                            </>
-                                        )}
-                                    </div>
-                                )}
+                                            )}
+                                        </div>
+                                    )}
+                                </div>
 
                                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '0.5rem' }}>
                                     <h3 style={{ fontSize: '1.125rem', fontWeight: 'bold', color: 'var(--text)', flex: 1 }}>
@@ -387,19 +403,38 @@ const AdminVideos = () => {
             {showModal && (
                 <div style={{
                     position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
-                    backgroundColor: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000,
-                    overflowY: 'auto', padding: '1rem'
+                    backgroundColor: 'rgba(255, 255, 255, 0.7)', 
+                    backdropFilter: 'blur(12px)', 
+                    display: 'flex', 
+                    alignItems: 'center', 
+                    justifyContent: 'center', 
+                    zIndex: 1000,
+                    overflowY: 'auto', 
+                    padding: '1rem'
                 }}>
-                    <Card style={{ width: '100%', maxWidth: '600px', position: 'relative', margin: 'auto' }}>
+                    <Card style={{ 
+                        width: '100%', 
+                        maxWidth: '600px', 
+                        position: 'relative', 
+                        margin: 'auto',
+                        backgroundColor: '#ffffff',
+                        padding: '2.5rem',
+                        borderRadius: '2.5rem',
+                        boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
+                        border: 'none'
+                    }}>
                         <button
                             onClick={() => { setShowModal(false); setEditingVideo(null); resetForm(); }}
-                            style={{ position: 'absolute', top: '1rem', right: '1rem', border: 'none', background: 'none', cursor: 'pointer', color: 'var(--text-light)' }}
+                            style={{ position: 'absolute', top: '1.5rem', right: '1.5rem', border: 'none', background: 'none', cursor: 'pointer', color: '#94A3B8' }}
                         >
-                            <X size={20} />
+                            <X size={24} />
                         </button>
-                        <h3 style={{ fontSize: '1.25rem', fontWeight: 'bold', marginBottom: '1.5rem' }}>
-                            {editingVideo ? 'Edit Video' : 'Add New Video'}
+                        <h3 style={{ fontSize: '1.875rem', fontWeight: '900', marginBottom: '0.5rem', color: '#0F172A', letterSpacing: '-0.025em' }}>
+                            {editingVideo ? 'Update Visual Content' : 'Initialize New Broadcast'}
                         </h3>
+                        <p style={{ color: '#64748B', marginBottom: '2.5rem', fontSize: '1rem', fontWeight: '500' }}>
+                            Configure the metadata and source for this educational video.
+                        </p>
                         <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
                             <Input
                                 label="Video Title"

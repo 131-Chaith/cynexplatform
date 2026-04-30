@@ -127,16 +127,23 @@ const AdminClasses = () => {
                         value={selectedCourseId}
                         onChange={e => setSelectedCourseId(e.target.value)}
                         style={{
-                            padding: '0.5rem 0.75rem', borderRadius: '0.5rem',
-                            border: '1px solid var(--border-color)', fontSize: '0.875rem',
-                            color: 'var(--text)', backgroundColor: 'white', cursor: 'pointer', outline: 'none'
+                            padding: '0.5rem 1rem', borderRadius: '0.75rem',
+                            border: selectedCourseId ? '2px solid var(--primary)' : '2px solid #E2E8F0',
+                            fontSize: '0.875rem', fontWeight: '600',
+                            color: selectedCourseId ? 'var(--primary)' : '#94A3B8',
+                            backgroundColor: 'white', cursor: 'pointer', outline: 'none',
+                            minWidth: '200px', transition: 'all 0.2s'
                         }}
                     >
-                        <option value="">Select Course</option>
+                        <option value="">⬇ Select a Course First</option>
                         {courses.map(c => <option key={c.id} value={c.id}>{c.title}</option>)}
                     </select>
-                    <Button onClick={() => { setError(''); setIsModalOpen(true); }} disabled={!selectedCourseId}>
-                        <Plus size={16} style={{ marginRight: '0.4rem' }} /> Add Class
+                    <Button
+                        onClick={() => { setError(''); setIsModalOpen(true); }}
+                        disabled={!selectedCourseId}
+                        title={!selectedCourseId ? 'Please select a course first' : 'Add a new class session'}
+                    >
+                        <Plus size={16} style={{ marginRight: '0.4rem' }} /> Add Class Session
                     </Button>
                 </div>
             </div>
@@ -259,84 +266,119 @@ const AdminClasses = () => {
                     alignItems: 'center', justifyContent: 'center', zIndex: 1000,
                     backdropFilter: 'blur(4px)'
                 }}>
-                    <Card style={{ width: '100%', maxWidth: '600px', margin: '1rem', position: 'relative', maxHeight: '90vh', overflowY: 'auto' }}>
-                        <button onClick={() => setIsModalOpen(false)} style={{ position: 'absolute', top: '1.25rem', right: '1.25rem', border: 'none', background: 'none', cursor: 'pointer', color: 'var(--text-light)' }}>
+                    <Card style={{ 
+                        width: '100%', 
+                        maxWidth: '700px', 
+                        margin: '1rem', 
+                        position: 'relative', 
+                        maxHeight: '92vh', 
+                        overflowY: 'auto',
+                        backgroundColor: 'white',
+                        borderRadius: '2.5rem',
+                        padding: '3rem'
+                    }}>
+                        <button 
+                            onClick={() => setIsModalOpen(false)} 
+                            style={{ 
+                                position: 'absolute', 
+                                top: '2rem', 
+                                right: '2rem', 
+                                border: 'none', 
+                                background: '#F1F5F9',
+                                width: '48px',
+                                height: '48px',
+                                borderRadius: '50%',
+                                cursor: 'pointer', 
+                                color: '#475569',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                zIndex: 10,
+                                transition: 'all 0.2s'
+                            }}
+                            onMouseOver={e => e.currentTarget.style.background = '#E2E8F0'}
+                            onMouseOut={e => e.currentTarget.style.background = '#F1F5F9'}
+                        >
                             <X size={24} />
                         </button>
-                        <h3 style={{ fontSize: '1.5rem', fontWeight: 'bold', marginBottom: '0.5rem', color: 'var(--text)' }}>Add New Class</h3>
-                        <p style={{ color: 'var(--text-light)', fontSize: '0.875rem', marginBottom: '1.5rem' }}>
-                            Fill in the details to schedule a new class session.
+                        <h3 style={{ fontSize: '2rem', fontWeight: '900', marginBottom: '0.75rem', color: '#0F172A', letterSpacing: '-0.03em' }}>Add New Class</h3>
+                        <p style={{ color: '#64748B', fontSize: '1rem', marginBottom: '2.5rem', fontWeight: '500' }}>
+                            Fill in the details below to schedule a new curriculum session.
                         </p>
                         
                         <form onSubmit={handleSubmit}>
-                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1rem' }}>
-                                <div style={{ gridColumn: 'span 2' }}>
-                                    <label style={{ display: 'block', fontWeight: '600', fontSize: '0.875rem', marginBottom: '0.4rem', color: 'var(--text)' }}>Class Title *</label>
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
+                                <div style={{ width: '100%' }}>
+                                    <label style={{ display: 'block', fontWeight: '800', fontSize: '0.9rem', marginBottom: '0.6rem', color: '#475569', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Class Title *</label>
                                     <input
                                         name="title" value={formData.title} onChange={handleChange} required
-                                        placeholder="e.g. Introduction to React Hooks"
-                                        style={{ width: '100%', padding: '0.625rem 0.75rem', border: '1px solid var(--border-color)', borderRadius: '0.5rem', fontSize: '0.875rem', outline: 'none', boxSizing: 'border-box' }}
+                                        placeholder="e.g. Advanced React Hooks & Patterns"
+                                        style={{ width: '100%', padding: '1.1rem 1.25rem', border: '1px solid #E2E8F0', borderRadius: '14px', fontSize: '1.05rem', outline: 'none', boxSizing: 'border-box', background: '#F8FAFC' }}
                                     />
                                 </div>
                                 
-                                <div>
-                                    <label style={{ display: 'block', fontWeight: '600', fontSize: '0.875rem', marginBottom: '0.4rem', color: 'var(--text)' }}>Module</label>
-                                    <select
-                                        name="module_id" value={formData.module_id} onChange={handleChange}
-                                        style={{ width: '100%', padding: '0.625rem 0.75rem', border: '1px solid var(--border-color)', borderRadius: '0.5rem', fontSize: '0.875rem', outline: 'none', boxSizing: 'border-box', backgroundColor: 'white' }}
-                                    >
-                                        <option value="">Select Module (Optional)</option>
-                                        {modules.map(m => <option key={m.id} value={m.id}>{m.title}</option>)}
-                                    </select>
-                                </div>
-                                
-                                <div>
-                                    <label style={{ display: 'block', fontWeight: '600', fontSize: '0.875rem', marginBottom: '0.4rem', color: 'var(--text)' }}>Topic</label>
-                                    <input
-                                        name="topic" value={formData.topic} onChange={handleChange}
-                                        placeholder="e.g. useEffect & useState"
-                                        style={{ width: '100%', padding: '0.625rem 0.75rem', border: '1px solid var(--border-color)', borderRadius: '0.5rem', fontSize: '0.875rem', outline: 'none', boxSizing: 'border-box' }}
-                                    />
-                                </div>
-
-                                <div>
-                                    <label style={{ display: 'block', fontWeight: '600', fontSize: '0.875rem', marginBottom: '0.4rem', color: 'var(--text)' }}>Instructor Name</label>
-                                    <input
-                                        name="instructor_name" value={formData.instructor_name} onChange={handleChange}
-                                        placeholder="e.g. Sharath"
-                                        style={{ width: '100%', padding: '0.625rem 0.75rem', border: '1px solid var(--border-color)', borderRadius: '0.5rem', fontSize: '0.875rem', outline: 'none', boxSizing: 'border-box' }}
-                                    />
+                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '2rem' }}>
+                                    <div>
+                                        <label style={{ display: 'block', fontWeight: '800', fontSize: '0.9rem', marginBottom: '0.6rem', color: '#475569', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Module</label>
+                                        <select
+                                            name="module_id" value={formData.module_id} onChange={handleChange}
+                                            style={{ width: '100%', padding: '1.1rem 1.25rem', border: '1px solid #E2E8F0', borderRadius: '14px', fontSize: '1rem', outline: 'none', boxSizing: 'border-box', backgroundColor: '#F8FAFC', cursor: 'pointer' }}
+                                        >
+                                            <option value="">Select Module (Optional)</option>
+                                            {modules.map(m => <option key={m.id} value={m.id}>{m.title}</option>)}
+                                        </select>
+                                    </div>
+                                    
+                                    <div>
+                                        <label style={{ display: 'block', fontWeight: '800', fontSize: '0.9rem', marginBottom: '0.6rem', color: '#475569', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Topic</label>
+                                        <input
+                                            name="topic" value={formData.topic} onChange={handleChange}
+                                            placeholder="e.g. Custom Hooks"
+                                            style={{ width: '100%', padding: '1.1rem 1.25rem', border: '1px solid #E2E8F0', borderRadius: '14px', fontSize: '1rem', outline: 'none', boxSizing: 'border-box', background: '#F8FAFC' }}
+                                        />
+                                    </div>
                                 </div>
 
-                                <div>
-                                    <label style={{ display: 'block', fontWeight: '600', fontSize: '0.875rem', marginBottom: '0.4rem', color: 'var(--text)' }}>Schedule *</label>
-                                    <input
-                                        name="schedule" type="datetime-local" value={formData.schedule} onChange={handleChange} required
-                                        style={{ width: '100%', padding: '0.625rem 0.75rem', border: '1px solid var(--border-color)', borderRadius: '0.5rem', fontSize: '0.875rem', outline: 'none', boxSizing: 'border-box' }}
-                                    />
+                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '2rem' }}>
+                                    <div>
+                                        <label style={{ display: 'block', fontWeight: '800', fontSize: '0.9rem', marginBottom: '0.6rem', color: '#475569', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Instructor Name</label>
+                                        <input
+                                            name="instructor_name" value={formData.instructor_name} onChange={handleChange}
+                                            placeholder="e.g. Sharath"
+                                            style={{ width: '100%', padding: '1.1rem 1.25rem', border: '1px solid #E2E8F0', borderRadius: '14px', fontSize: '1rem', outline: 'none', boxSizing: 'border-box', background: '#F8FAFC' }}
+                                        />
+                                    </div>
+
+                                    <div>
+                                        <label style={{ display: 'block', fontWeight: '800', fontSize: '0.9rem', marginBottom: '0.6rem', color: '#475569', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Schedule *</label>
+                                        <input
+                                            name="schedule" type="datetime-local" value={formData.schedule} onChange={handleChange} required
+                                            style={{ width: '100%', padding: '1.1rem 1.25rem', border: '1px solid #E2E8F0', borderRadius: '14px', fontSize: '1rem', outline: 'none', boxSizing: 'border-box', background: '#F8FAFC' }}
+                                        />
+                                    </div>
                                 </div>
 
-                                <div style={{ gridColumn: 'span 2' }}>
-                                    <label style={{ display: 'block', fontWeight: '600', fontSize: '0.875rem', marginBottom: '0.4rem', color: 'var(--text)' }}>YouTube Video URL *</label>
+                                <div style={{ width: '100%' }}>
+                                    <label style={{ display: 'block', fontWeight: '800', fontSize: '0.9rem', marginBottom: '0.6rem', color: '#475569', textTransform: 'uppercase', letterSpacing: '0.05em' }}>YouTube Video URL *</label>
                                     <input
                                         name="video_url" value={formData.video_url} onChange={handleChange} required
                                         placeholder="https://www.youtube.com/watch?v=..."
-                                        style={{ width: '100%', padding: '0.625rem 0.75rem', border: '1px solid var(--border-color)', borderRadius: '0.5rem', fontSize: '0.875rem', outline: 'none', boxSizing: 'border-box' }}
+                                        style={{ width: '100%', padding: '1.1rem 1.25rem', border: '1px solid #E2E8F0', borderRadius: '14px', fontSize: '1rem', outline: 'none', boxSizing: 'border-box', background: '#F8FAFC' }}
                                     />
                                     {formData.video_url && getYoutubeId(formData.video_url) && (
-                                        <div style={{ marginTop: '0.75rem', borderRadius: '0.5rem', overflow: 'hidden', border: '1px solid var(--border-color)' }}>
+                                        <div style={{ marginTop: '1.5rem', borderRadius: '20px', overflow: 'hidden', border: '4px solid #F1F5F9', boxShadow: '0 10px 15px -3px rgba(0,0,0,0.1)' }}>
                                             <img
                                                 src={`https://img.youtube.com/vi/${getYoutubeId(formData.video_url)}/mqdefault.jpg`}
                                                 alt="Preview"
-                                                style={{ width: '100%', maxHeight: '140px', objectFit: 'cover' }}
+                                                style={{ width: '100%', maxHeight: '200px', objectFit: 'cover' }}
                                             />
                                         </div>
                                     )}
                                 </div>
                             </div>
 
-                            <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'flex-end', marginTop: '1.5rem', paddingTop: '1rem', borderTop: '1px solid var(--border-color)' }}>
-                                <button type="button" onClick={() => setIsModalOpen(false)} style={{ padding: '0.625rem 1.25rem', border: '1px solid var(--border-color)', borderRadius: '0.5rem', background: 'white', cursor: 'pointer', fontWeight: '600', fontSize: '0.875rem', color: 'var(--text)' }}>
+                            <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'flex-end', marginTop: '2.5rem', paddingTop: '1.5rem', borderTop: '1px solid #E2E8F0' }}>
+                                <button type="button" onClick={() => setIsModalOpen(false)} style={{ padding: '0.8rem 1.5rem', border: '1px solid #E2E8F0', borderRadius: '12px', background: 'white', cursor: 'pointer', fontWeight: '700', fontSize: '0.95rem', color: '#64748B' }}>
                                     Cancel
                                 </button>
                                 <button type="submit" disabled={submitting} style={{

@@ -271,7 +271,12 @@ const AdminCourses = () => {
                         exit={{ opacity: 0 }}
                         style={{
                             position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
-                            backgroundColor: 'rgba(2, 6, 23, 0.6)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000
+                            backgroundColor: 'rgba(255, 255, 255, 0.7)', 
+                            backdropFilter: 'blur(12px)', 
+                            display: 'flex', 
+                            alignItems: 'center', 
+                            justifyContent: 'center', 
+                            zIndex: 1000
                         }}
                     >
                         <motion.div 
@@ -280,17 +285,26 @@ const AdminCourses = () => {
                             exit={{ scale: 0.95, y: 20 }}
                             style={{ width: '100%', maxWidth: '550px' }}
                         >
-                            <Card style={{ position: 'relative', maxHeight: '90vh', overflowY: 'auto', padding: '2rem', borderRadius: '1.5rem' }}>
+                            <Card style={{ 
+                                position: 'relative', 
+                                maxHeight: '90vh', 
+                                overflowY: 'auto', 
+                                padding: '2.5rem', 
+                                borderRadius: '2.5rem',
+                                backgroundColor: '#ffffff',
+                                border: 'none',
+                                boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)'
+                            }}>
                                 <button
                                     onClick={() => { setShowModal(false); setEditingCourse(null); }}
                                     style={{ position: 'absolute', top: '1.5rem', right: '1.5rem', border: 'none', background: 'none', cursor: 'pointer', color: '#94A3B8' }}
                                 >
                                     <X size={24} />
                                 </button>
-                                <h3 style={{ fontSize: '1.5rem', fontWeight: '900', marginBottom: '0.25rem', color: '#1E293B' }}>
+                                <h3 style={{ fontSize: '1.875rem', fontWeight: '900', marginBottom: '0.5rem', color: '#0F172A', letterSpacing: '-0.025em' }}>
                                     {editingCourse ? 'Update Prototype' : 'New Program Initialization'}
                                 </h3>
-                                <p style={{ color: '#64748B', marginBottom: '2rem', fontSize: '0.9rem' }}>Configure the parameters for this educational asset.</p>
+                                <p style={{ color: '#64748B', marginBottom: '2.5rem', fontSize: '1rem', fontWeight: '500' }}>Configure the parameters for this educational asset.</p>
 
                                 <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
                                     <Input
@@ -395,7 +409,12 @@ const AdminCourses = () => {
                         exit={{ opacity: 0 }}
                         style={{
                             position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
-                            backgroundColor: 'rgba(2, 6, 23, 0.6)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000
+                            backgroundColor: 'rgba(255, 255, 255, 0.7)', 
+                            backdropFilter: 'blur(12px)', 
+                            display: 'flex', 
+                            alignItems: 'center', 
+                            justifyContent: 'center', 
+                            zIndex: 1000
                         }}
                     >
                         <motion.div 
@@ -404,14 +423,21 @@ const AdminCourses = () => {
                             exit={{ scale: 0.95, y: 20 }}
                             style={{ width: '100%', maxWidth: '500px' }}
                         >
-                            <Card style={{ position: 'relative', padding: '2rem', borderRadius: '1.5rem' }}>
+                            <Card style={{ 
+                                position: 'relative', 
+                                padding: '2.5rem', 
+                                borderRadius: '2.5rem',
+                                backgroundColor: '#ffffff',
+                                border: 'none',
+                                boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)'
+                            }}>
                                 <button
                                     onClick={() => setShowModulesModal(false)}
                                     style={{ position: 'absolute', top: '1.5rem', right: '1.5rem', border: 'none', background: 'none', cursor: 'pointer', color: '#94A3B8' }}
                                 >
                                     <X size={24} />
                                 </button>
-                                <h3 style={{ fontSize: '1.5rem', fontWeight: '900', marginBottom: '0.5rem', color: '#1E293B' }}>System Architecture</h3>
+                                <h3 style={{ fontSize: '1.875rem', fontWeight: '900', marginBottom: '0.5rem', color: '#0F172A', letterSpacing: '-0.025em' }}>System Architecture</h3>
                                 <p style={{ color: 'var(--primary)', marginBottom: '2rem', fontWeight: '700' }}>{activeCourse.title}</p>
 
 
