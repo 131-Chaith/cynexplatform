@@ -50,11 +50,11 @@ export const AuthProvider = ({ children }) => {
             setIsSuperAdmin(user.role === 'super_admin');
             return { success: true };
         } catch (error) {
-            console.error("Login failed (detailed):", {
+            console.error("Login failed (detailed):", JSON.stringify({
                 message: error.message,
                 response: error.response?.data,
                 status: error.response?.status
-            });
+            }, null, 2));
             return { 
                 success: false, 
                 message: error.response?.data?.message || 'Login failed',

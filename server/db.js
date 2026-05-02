@@ -10,7 +10,7 @@ const __dirname = path.dirname(__filename);
 dotenv.config({ path: path.join(__dirname, '.env') });
 
 export const db = createClient(
-    process.env.TURSO_DATABASE_URL
+    (process.env.TURSO_DATABASE_URL && process.env.TURSO_DATABASE_URL.trim() !== "")
         ? {
             url: process.env.TURSO_DATABASE_URL,
             authToken: process.env.TURSO_AUTH_TOKEN
