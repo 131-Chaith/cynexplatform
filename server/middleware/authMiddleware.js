@@ -1,7 +1,7 @@
 import jwt from 'jsonwebtoken';
-import dotenv from 'dotenv';
 
-dotenv.config();
+// Do not call dotenv.config() here, index.js handles it globally.
+// If needed for standalone use, use a check.
 
 const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key';
 

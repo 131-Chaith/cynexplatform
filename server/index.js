@@ -1,17 +1,15 @@
-import express from 'express';
-import cors from 'cors';
 import dotenv from 'dotenv';
 import path from 'path';
-import fs from 'fs';
 import { fileURLToPath } from 'url';
+import fs from 'fs';
+import express from 'express';
+import cors from 'cors';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// Use dotenv correctly: load from .env only if not in production
-if (process.env.NODE_ENV !== 'production') {
-    dotenv.config({ path: path.join(__dirname, '.env') });
-}
+// Load environment variables immediately
+dotenv.config({ path: path.join(__dirname, '.env') });
 
 import { db } from './db.js';
 
