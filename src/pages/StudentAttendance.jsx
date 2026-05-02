@@ -81,16 +81,20 @@ const StudentAttendance = () => {
 
     const handleJoinOnline = async (session) => {
         try {
+            if (!session.meet_link) return alert('No meeting link available.');
+            const url = session.meet_link.startsWith('http') ? session.meet_link : `https://${session.meet_link}`;
+            
             // Track join event
             await api.post('attendance/student/join-online', { sessionId: session.id });
             
             // Open Meet in new tab
-            window.open(session.meet_link, '_blank');
+            window.open(url, '_blank');
             
             setTimeout(fetchData, 2000);
         } catch (err) {
             console.error('Join tracking failed:', err);
-            window.open(session.meet_link, '_blank');
+            const url = session.meet_link.startsWith('http') ? session.meet_link : `https://${session.meet_link}`;
+            window.open(url, '_blank');
         }
     };
 

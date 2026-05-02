@@ -568,7 +568,15 @@ const SessionCard = ({ session, role, onViewQR, onStop }) => (
 
             <div style={{ display: 'flex', gap: '0.5rem' }}>
                 <Button 
-                    onClick={() => session.type === 'online' ? window.open(session.meet_link, '_blank') : onViewQR()} 
+                    onClick={() => {
+                        if (session.type === 'online') {
+                            if (!session.meet_link) return alert('No meeting link provided for this session.');
+                            const url = session.meet_link.startsWith('http') ? session.meet_link : `https://${session.meet_link}`;
+                            window.open(url, '_blank');
+                        } else {
+                            onViewQR();
+                        }
+                    }} 
                     style={{ flex: 1, background: session.type === 'online' ? '#6366F1' : '#F59E0B', fontSize: '0.8rem', fontWeight: '800', height: '40px' }}
                 >
                     {session.type === 'online' ? <><Video size={14} /> Join Meet</> : <><QrCode size={14} /> Show QR</>}
@@ -744,10 +752,19 @@ const CreateSessionModal = ({ onClose, onSubmit }) => {
                             </label>
                             <input 
                                 type="text" 
-                                readOnly
                                 placeholder={generatingLink ? "Generating link..." : "https://meet.google.com/..."} 
                                 value={formData.meet_link || ''} 
-                                style={{ padding: '0.8rem', borderRadius: '10px', border: '1px solid #E2E8F0', fontSize: '0.85rem', outline: 'none', background: '#F8FAFC', color: '#64748B' }} 
+                                onChange={e => setFormData({...formData, meet_link: e.target.value})}
+                                style={{ 
+                                    padding: '0.8rem', 
+                                    borderRadius: '10px', 
+                                    border: '1px solid #E2E8F0', 
+                                    fontSize: '0.85rem', 
+                                    outline: 'none', 
+                                    background: generatingLink ? '#F8FAFC' : 'white', 
+                                    color: '#1E293B',
+                                    fontWeight: '600'
+                                }} 
                             />
                             {authStatus === 'missing' && !generatingLink && (
                                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '0.2rem' }}>
