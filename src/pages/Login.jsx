@@ -32,7 +32,8 @@ const Login = () => {
                     navigate(user.role === 'admin' ? '/admin' : '/student');
                 }, 1500);
             } else {
-                setError(result.message);
+                const detailedMsg = result.details ? `${result.message}: ${result.details}` : result.message;
+                setError(detailedMsg);
             }
         } catch (err) {
             setError('An error occurred during login');
