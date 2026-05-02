@@ -1,5 +1,7 @@
 {
   "version": 2,
+  "buildCommand": "npm run build",
+  "outputDirectory": "dist",
   "rewrites": [
     { "source": "/api/auth/(.*)", "destination": "/api/auth.js" },
     { "source": "/api/courses/(.*)", "destination": "/api/courses.js" },
@@ -13,7 +15,7 @@
     { "source": "/api/youtube/(.*)", "destination": "/api/youtube.js" },
     { "source": "/api/announcements/(.*)", "destination": "/api/announcements.js" },
     { "source": "/api/(.*)", "destination": "/api/index.js" },
-    { "source": "/((?!api/)(?:[^.]+$|$))", "destination": "/index.html" }
+    { "source": "/(.*)", "destination": "/index.html" }
   ],
   "functions": {
     "api/*.js": {
