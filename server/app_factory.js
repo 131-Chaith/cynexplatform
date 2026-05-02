@@ -9,8 +9,16 @@ const __dirname = path.dirname(__filename);
 export function createModularApp(routePath, router) {
     const app = express();
     
-    app.use(cors());
-    app.use(express.json());
+    const corsOptions = {
+        origin: '*',
+        methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+        allowedHeaders: ['Content-Type', 'Authorization'],
+        credentials: false
+    };
+    app.use(cors(corsOptions));
+    app.options('*', cors(corsOptions));
+    app.use(express.json({ limit: '10mb' }));
+    app.use(express.urlencoded({ extended: true }));
     
     // Static uploads (Note: This is disabled on Vercel to prevent bundling large files)
     if (process.env.NODE_ENV !== 'production' && !process.env.VERCEL) {

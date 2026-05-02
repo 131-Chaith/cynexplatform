@@ -1,9 +1,16 @@
-import express from 'express'; // Trigger reload v4
+import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import path from 'path';
 import fs from 'fs';
 import { fileURLToPath } from 'url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+// Load env FIRST before any other imports that need it
+dotenv.config({ path: path.join(__dirname, '.env') });
+
 import { db } from './db.js';
 
 // Routes
@@ -19,12 +26,6 @@ import attendanceRouter from './routes/attendance.js';
 import youtubeRouter from './routes/youtube.js';
 import announcementsRouter from './routes/announcements.js';
 
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-
-dotenv.config({ path: path.join(__dirname, '.env') });
-
 const app = express();
 const PORT = process.env.PORT || 5002;
 
@@ -34,9 +35,17 @@ if (!fs.existsSync(uploadsDir)) {
     fs.mkdirSync(uploadsDir, { recursive: true });
 }
 
-
-app.use(cors());
-app.use(express.json());
+// Full CORS config — allows all origins (required for Vercel frontend + Render backend)
+const corsOptions = {
+    origin: '*',
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization'],
+    credentials: false
+};
+app.use(cors(corsOptions));
+app.options('*', cors(corsOptions)); // Handle preflight for all routes
+app.use(express.json({ limit: '10mb' }));
+app.use(express.urlencoded({ extended: true }));
 
 // Global Logger (Temporary)
 app.use((req, res, next) => {
@@ -65,8 +74,16 @@ app.use('/api/youtube', youtubeRouter);
 app.use('/api/announcements', announcementsRouter);
 
 
+app.get('/api', (req, res) => {
+    res.json({ 
+        message: 'Cynex Portal API is running',
+        database: process.env.TURSO_DATABASE_URL ? 'Turso Cloud' : 'Local SQLite',
+        env: process.env.NODE_ENV || 'development'
+    });
+});
+
 app.get('/', (req, res) => {
-    res.json({ message: 'Student Portal API is running' });
+    res.json({ message: 'Cynex Portal API is running' });
 });
 
 if (process.env.NODE_ENV !== 'production' || !process.env.VERCEL) {
