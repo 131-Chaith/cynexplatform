@@ -81,6 +81,15 @@ app.get('/api/health', (req, res) => {
     });
 });
 
+app.get('/api/db-test', async (req, res) => {
+    try {
+        const result = await db.execute("SELECT 1 as connected");
+        res.json({ success: true, data: result.rows });
+    } catch (error) {
+        res.status(500).json({ success: false, error: error.message, stack: error.stack });
+    }
+});
+
 // Basic landing
 app.get('/', (req, res) => {
     res.json({ message: 'Cynex Portal API is active' });
