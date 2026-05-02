@@ -180,6 +180,22 @@ const initDb = async () => {
         `);
 
         console.log("Database initialized successfully!");
+
+        // Seed Default Admin and Student for Local Testing
+        const bcrypt = await import('bcryptjs');
+        const hashedPassword = await bcrypt.default.hash('admin123', 10);
+        const hashedStudentPassword = await bcrypt.default.hash('student123', 10);
+        
+        await db.execute({
+            sql: "INSERT OR IGNORE INTO users (name, email, password, role) VALUES (?, ?, ?, ?)",
+            args: ["Admin User", "admin@cynex.ai", hashedPassword, "admin"]
+        });
+        await db.execute({
+            sql: "INSERT OR IGNORE INTO users (name, email, password, role) VALUES (?, ?, ?, ?)",
+            args: ["Student User", "student@cynex.ai", hashedStudentPassword, "student"]
+        });
+        console.log("Seeded default users successfully!");
+
     } catch (error) {
         console.error("Error initializing database:", error);
     }

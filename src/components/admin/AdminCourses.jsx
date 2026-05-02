@@ -36,8 +36,8 @@ const AdminCourses = () => {
                 api.get('courses'),
                 api.get('modules')
             ]);
-            setCourses(coursesRes.data);
-            setAvailableModules(modulesRes.data);
+            setCourses(Array.isArray(coursesRes.data) ? coursesRes.data : []);
+            setAvailableModules(Array.isArray(modulesRes.data) ? modulesRes.data : []);
             setLoading(false);
         } catch (error) {
             console.error("Failed to fetch data", error);
@@ -170,7 +170,7 @@ const AdminCourses = () => {
                         perspective: '1200px'
                     }}
                 >
-                    {courses.map((course, i) => (
+                    {(courses || []).map((course, i) => (
                         <motion.div 
                             key={course.id} 
                             variants={item}

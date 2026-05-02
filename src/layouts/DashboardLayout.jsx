@@ -27,6 +27,95 @@ import {
     Zap
 } from 'lucide-react';
 
+const SidebarItem = ({ item, sidebarOpen, isActive, navigate, location }) => {
+    const [isOpen, setIsOpen] = useState(isActive);
+    
+    return (
+        <div key={item.label}>
+            <motion.button
+                whileHover={{ x: 5 }}
+                whileTap={{ scale: 0.98 }}
+                onClick={() => {
+                    if (item.subItems) {
+                        setIsOpen(!isOpen);
+                    } else {
+                        navigate(item.path);
+                    }
+                }}
+                style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: sidebarOpen ? 'flex-start' : 'center',
+                    gap: '1rem',
+                    width: '100%',
+                    padding: '0.875rem',
+                    marginBottom: '0.25rem',
+                    borderRadius: '0.75rem',
+                    border: 'none',
+                    backgroundColor: (isActive && !item.subItems) ? 'rgba(37, 99, 235, 0.08)' : 'transparent',
+                    color: isActive ? 'var(--primary)' : '#64748B',
+                    cursor: 'pointer',
+                    textAlign: 'left',
+                    fontSize: '0.875rem',
+                    fontWeight: isActive ? '700' : '500',
+                    transition: 'all 0.2s',
+                    position: 'relative'
+                }}
+            >
+                <div style={{ color: isActive ? 'var(--primary)' : '#94A3B8' }}>{item.icon}</div>
+                {sidebarOpen && (
+                    <>
+                        <span style={{ flex: 1 }}>{item.label}</span>
+                        {item.subItems && (
+                            <motion.div animate={{ rotate: isOpen ? 180 : 0 }}>
+                                <ChevronDown size={16} />
+                            </motion.div>
+                        )}
+                    </>
+                )}
+            </motion.button>
+
+            {item.subItems && sidebarOpen && (
+                <AnimatePresence>
+                    {isOpen && (
+                        <motion.div
+                            initial={{ height: 0, opacity: 0 }}
+                            animate={{ height: 'auto', opacity: 1 }}
+                            exit={{ height: 0, opacity: 0 }}
+                            style={{ overflow: 'hidden', paddingLeft: '2.5rem' }}
+                        >
+                            {item.subItems.map(sub => {
+                                const isSubActive = location.pathname === sub.path;
+                                return (
+                                    <button
+                                        key={sub.path}
+                                        onClick={() => navigate(sub.path)}
+                                        style={{
+                                            display: 'block',
+                                            width: '100%',
+                                            padding: '0.6rem 0.8rem',
+                                            textAlign: 'left',
+                                            background: 'none',
+                                            border: 'none',
+                                            borderRadius: '0.5rem',
+                                            fontSize: '0.8rem',
+                                            color: isSubActive ? 'var(--primary)' : '#94A3B8',
+                                            fontWeight: isSubActive ? '700' : '500',
+                                            cursor: 'pointer'
+                                        }}
+                                    >
+                                        {sub.label}
+                                    </button>
+                                );
+                            })}
+                        </motion.div>
+                    )}
+                </AnimatePresence>
+            )}
+        </div>
+    );
+};
+
 const DashboardLayout = () => {
     const { currentUser, isAdmin, isSuperAdmin, logout } = useAuth();
     const navigate = useNavigate();
@@ -48,23 +137,21 @@ const DashboardLayout = () => {
             subItems: [
                 { label: 'Courses', path: '/admin/courses' },
                 { label: 'Batches', path: '/admin/batches' },
-                { label: 'Attendance', path: '/admin/attendance' }
+                { label: 'Modules', path: '/admin/modules' }
             ]
         },
-        { icon: <Layers size={20} />, label: 'Modules', path: '/admin/modules', roles: ['admin', 'super_admin'] },
-        { icon: <Video size={20} />, label: 'Videos', path: '/admin/videos', roles: ['admin', 'super_admin'] },
         { 
             icon: <ClipboardList size={20} />, 
             label: 'Attendance', 
             path: '/admin/attendance', 
             roles: ['admin', 'super_admin']
         },
+        { icon: <Video size={20} />, label: 'Classes', path: '/admin/classes', roles: ['admin', 'super_admin'] },
         { icon: <FileText size={20} />, label: 'Certificates', path: '/admin/certificates', roles: ['admin', 'super_admin'] },
         { icon: <MessageSquare size={20} />, label: 'Announcements', path: '/admin/announcements', roles: ['admin', 'super_admin'] },
-        { icon: <Settings size={20} />, label: 'Settings', path: '/admin/settings', roles: ['admin', 'super_admin'] },
         { icon: <FileText size={20} />, label: 'Projects', path: '/admin/projects', roles: ['admin', 'super_admin'] },
         { icon: <FileText size={20} />, label: 'Assessments', path: '/admin/assessments', roles: ['admin', 'super_admin'] },
-        { icon: <Video size={20} />, label: 'Classes', path: '/admin/classes', roles: ['admin', 'super_admin'] },
+        { icon: <Settings size={20} />, label: 'Settings', path: '/admin/settings', roles: ['admin', 'super_admin'] },
     ];
 
     const studentItems = [
@@ -125,95 +212,16 @@ const DashboardLayout = () => {
                 </div>
 
                 <nav style={{ flex: 1, padding: '1rem', overflowY: 'auto' }}>
-                    {menuItems.map((item) => {
-                        const isActive = location.pathname.startsWith(item.path);
-                        const [isOpen, setIsOpen] = useState(isActive);
-
-                        return (
-                            <div key={item.label}>
-                                <motion.button
-                                    whileHover={{ x: 5 }}
-                                    whileTap={{ scale: 0.98 }}
-                                    onClick={() => {
-                                        if (item.subItems) {
-                                            setIsOpen(!isOpen);
-                                        } else {
-                                            navigate(item.path);
-                                        }
-                                    }}
-                                    style={{
-                                        display: 'flex',
-                                        alignItems: 'center',
-                                        justifyContent: sidebarOpen ? 'flex-start' : 'center',
-                                        gap: '1rem',
-                                        width: '100%',
-                                        padding: '0.875rem',
-                                        marginBottom: '0.25rem',
-                                        borderRadius: '0.75rem',
-                                        border: 'none',
-                                        backgroundColor: (isActive && !item.subItems) ? 'rgba(37, 99, 235, 0.08)' : 'transparent',
-                                        color: isActive ? 'var(--primary)' : '#64748B',
-                                        cursor: 'pointer',
-                                        textAlign: 'left',
-                                        fontSize: '0.875rem',
-                                        fontWeight: isActive ? '700' : '500',
-                                        transition: 'all 0.2s',
-                                        position: 'relative'
-                                    }}
-                                >
-                                    <div style={{ color: isActive ? 'var(--primary)' : '#94A3B8' }}>{item.icon}</div>
-                                    {sidebarOpen && (
-                                        <>
-                                            <span style={{ flex: 1 }}>{item.label}</span>
-                                            {item.subItems && (
-                                                <motion.div animate={{ rotate: isOpen ? 180 : 0 }}>
-                                                    <ChevronDown size={16} />
-                                                </motion.div>
-                                            )}
-                                        </>
-                                    )}
-                                </motion.button>
-
-                                {item.subItems && sidebarOpen && (
-                                    <AnimatePresence>
-                                        {isOpen && (
-                                            <motion.div
-                                                initial={{ height: 0, opacity: 0 }}
-                                                animate={{ height: 'auto', opacity: 1 }}
-                                                exit={{ height: 0, opacity: 0 }}
-                                                style={{ overflow: 'hidden', paddingLeft: '2.5rem' }}
-                                            >
-                                                {item.subItems.map(sub => {
-                                                    const isSubActive = location.pathname === sub.path;
-                                                    return (
-                                                        <button
-                                                            key={sub.path}
-                                                            onClick={() => navigate(sub.path)}
-                                                            style={{
-                                                                display: 'block',
-                                                                width: '100%',
-                                                                padding: '0.6rem 0.8rem',
-                                                                textAlign: 'left',
-                                                                background: 'none',
-                                                                border: 'none',
-                                                                borderRadius: '0.5rem',
-                                                                fontSize: '0.8rem',
-                                                                color: isSubActive ? 'var(--primary)' : '#94A3B8',
-                                                                fontWeight: isSubActive ? '700' : '500',
-                                                                cursor: 'pointer'
-                                                            }}
-                                                        >
-                                                            {sub.label}
-                                                        </button>
-                                                    );
-                                                })}
-                                            </motion.div>
-                                        )}
-                                    </AnimatePresence>
-                                )}
-                            </div>
-                        );
-                    })}
+                    {menuItems.map((item) => (
+                        <SidebarItem 
+                            key={item.label}
+                            item={item}
+                            sidebarOpen={sidebarOpen}
+                            isActive={location.pathname.startsWith(item.path)}
+                            navigate={navigate}
+                            location={location}
+                        />
+                    ))}
                 </nav>
 
                 <div style={{ padding: '1rem', borderTop: '1px solid #f1f5f9' }}>

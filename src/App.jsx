@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { lazy, Suspense } from 'react';
 import { 
     createBrowserRouter, 
     RouterProvider, 
@@ -8,34 +8,45 @@ import {
 } from 'react-router-dom';
 import { AuthProvider } from './context/AuthContext';
 import { DataProvider } from './context/DataContext';
-import Login from './pages/Login';
-import Signup from './pages/Signup';
-import StudentDashboard from './pages/StudentDashboard';
-import StudentCourses from './pages/StudentCourses';
-import StudentClasses from './pages/StudentClasses';
-import StudentProfile from './pages/StudentProfile';
-import AdminDashboard from './pages/AdminDashboard';
-import AdminStudents from './components/admin/AdminStudents';
-import AdminBatches from './components/admin/AdminBatches';
-import AdminCourses from './components/admin/AdminCourses';
-import AdminModules from './components/admin/AdminModules';
-import AdminVideos from './components/admin/AdminVideos';
-import AdminLayout from './layouts/DashboardLayout';
-import StudentLayout from './layouts/DashboardLayout';
-import MockTests from './components/student/MockTests';
-import Certificates from './components/student/Certificates';
-import Assignments from './components/student/Assignments';
-import ProjectApprovals from './components/admin/ProjectApprovals';
-import CertificateApprovals from './components/admin/CertificateApprovals';
-import ContentManagement from './components/admin/ContentManagement';
-import AdminAssessments from './components/admin/AdminAssessments';
-import AdminClasses from './components/admin/AdminClasses';
-import AdminAttendance from './pages/AttendanceDashboard';
-import StudentAttendance from './pages/StudentAttendance';
-import VideoViewer from './pages/VideoViewer';
-import AttendanceLanding from './pages/AttendanceLanding';
-import AdminAnnouncements from './components/admin/AdminAnnouncements';
-import StudentAnnouncements from './components/student/StudentAnnouncements';
+
+// Lazy load layouts
+const AdminLayout = lazy(() => import('./layouts/DashboardLayout'));
+const StudentLayout = lazy(() => import('./layouts/DashboardLayout'));
+
+// Lazy load pages
+const Login = lazy(() => import('./pages/Login'));
+const Signup = lazy(() => import('./pages/Signup'));
+const StudentDashboard = lazy(() => import('./pages/StudentDashboard'));
+const StudentCourses = lazy(() => import('./pages/StudentCourses'));
+const StudentClasses = lazy(() => import('./pages/StudentClasses'));
+const StudentProfile = lazy(() => import('./pages/StudentProfile'));
+const AdminDashboard = lazy(() => import('./pages/AdminDashboard'));
+const AdminStudents = lazy(() => import('./components/admin/AdminStudents'));
+const AdminBatches = lazy(() => import('./components/admin/AdminBatches'));
+const AdminModules = lazy(() => import('./components/admin/AdminModules'));
+const AdminVideos = lazy(() => import('./components/admin/AdminVideos'));
+const MockTests = lazy(() => import('./components/student/MockTests'));
+const Certificates = lazy(() => import('./components/student/Certificates'));
+const Assignments = lazy(() => import('./components/student/Assignments'));
+const ProjectApprovals = lazy(() => import('./components/admin/ProjectApprovals'));
+const CertificateApprovals = lazy(() => import('./components/admin/CertificateApprovals'));
+const ContentManagement = lazy(() => import('./components/admin/ContentManagement'));
+const AdminAssessments = lazy(() => import('./components/admin/AdminAssessments'));
+const AdminClasses = lazy(() => import('./components/admin/AdminClasses'));
+const AdminAttendance = lazy(() => import('./pages/AttendanceDashboard'));
+const StudentAttendance = lazy(() => import('./pages/StudentAttendance'));
+const VideoViewer = lazy(() => import('./pages/VideoViewer'));
+const AttendanceLanding = lazy(() => import('./pages/AttendanceLanding'));
+const AdminAnnouncements = lazy(() => import('./components/admin/AdminAnnouncements'));
+const StudentAnnouncements = lazy(() => import('./components/student/StudentAnnouncements'));
+const AdminSettings = lazy(() => import('./components/admin/AdminSettings'));
+
+// Loading component
+const PageLoader = () => (
+    <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', background: '#0F172A', color: 'white' }}>
+        <div className="loader">Loading Cynex Portal...</div>
+    </div>
+);
 
 const router = createBrowserRouter(
     createRoutesFromElements(
@@ -87,6 +98,7 @@ const router = createBrowserRouter(
                 <Route path="/admin/assessments" element={<AdminAssessments />} />
                 <Route path="/admin/announcements" element={<AdminAnnouncements />} />
                 <Route path="/admin/classes" element={<AdminClasses />} />
+                <Route path="/admin/settings" element={<AdminSettings />} />
             </Route>
 
             {/* Default Route */}
@@ -110,7 +122,9 @@ function App() {
         <AuthProvider>
             <DataProvider>
                 <div className="App">
-                    <RouterProvider router={router} future={{ v7_startTransition: true }} />
+                    <Suspense fallback={<PageLoader />}>
+                        <RouterProvider router={router} future={{ v7_startTransition: true }} />
+                    </Suspense>
                 </div>
             </DataProvider>
         </AuthProvider>

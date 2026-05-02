@@ -3,13 +3,13 @@ import { useData } from '../../context/DataContext';
 import api from '../../services/api';
 import Card from '../Card';
 import Button from '../Button';
-import { Users, BookOpen, Calendar, CheckCircle, XCircle, Clock, Search, Filter, FileSpreadsheet, RefreshCw } from 'lucide-react';
+import { Users, BookOpen, Calendar, CheckCircle, XCircle, Clock, Search, Filter, FileSpreadsheet, RefreshCw, BarChart } from 'lucide-react';
 import GoogleSheetsAttendanceSync from './GoogleSheetsAttendanceSync';
 import { AnimatePresence } from 'framer-motion';
 
 const AdminAttendance = () => {
-    const { data } = useData();
-    const { courses = [] } = data;
+    const { data } = useData() || {};
+    const { courses = [] } = data || {};
     const [batches, setBatches] = useState([]);
     const [selectedBatchId, setSelectedBatchId] = useState('');
     const [selectedCourseId, setSelectedCourseId] = useState('');
@@ -122,7 +122,7 @@ const AdminAttendance = () => {
                             style={{ width: '100%', padding: '0.625rem', borderRadius: '0.5rem', border: '1px solid #D1D5DB', backgroundColor: 'white' }}
                         >
                             <option value="">All Batches</option>
-                            {batches.map(b => <option key={b.id} value={b.id}>{b.batch_name}</option>)}
+                            {(batches || []).map(b => <option key={b.id} value={b.id}>{b.batch_name}</option>)}
                         </select>
                     </div>
                     <div style={{ flex: 1, minWidth: '200px' }}>
@@ -133,7 +133,7 @@ const AdminAttendance = () => {
                             style={{ width: '100%', padding: '0.625rem', borderRadius: '0.5rem', border: '1px solid #D1D5DB', backgroundColor: 'white' }}
                         >
                             <option value="">All Courses</option>
-                            {courses.map(c => <option key={c.id} value={c.id}>{c.title}</option>)}
+                            {(courses || []).map(c => <option key={c.id} value={c.id}>{c.title}</option>)}
                         </select>
                     </div>
                     <div style={{ flex: 1, minWidth: '250px' }}>
@@ -164,87 +164,120 @@ const AdminAttendance = () => {
                     <p style={{ color: '#6B7280' }}>Try adjusting your filters or adding some classes.</p>
                 </div>
             ) : (
-                <div style={{ backgroundColor: 'white', borderRadius: '1rem', border: '1px solid #E5E7EB', overflow: 'hidden', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)' }}>
-                    <div style={{ overflowX: 'auto' }}>
-                        <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
-                            <thead style={{ backgroundColor: '#F9FAFB', borderBottom: '1px solid #E5E7EB' }}>
-                                <tr>
-                                    <th style={{ padding: '1rem', fontSize: '0.75rem', fontWeight: '600', color: '#4B5563', textTransform: 'uppercase' }}>Student</th>
-                                    <th style={{ padding: '1rem', fontSize: '0.75rem', fontWeight: '600', color: '#4B5563', textTransform: 'uppercase' }}>Batch / Course</th>
-                                    <th style={{ padding: '1rem', fontSize: '0.75rem', fontWeight: '600', color: '#4B5563', textTransform: 'uppercase' }}>Class / Topic</th>
-                                    <th style={{ padding: '1rem', fontSize: '0.75rem', fontWeight: '600', color: '#4B5563', textTransform: 'uppercase' }}>Date & Time</th>
-                                    <th style={{ padding: '1rem', fontSize: '0.75rem', fontWeight: '600', color: '#4B5563', textTransform: 'uppercase' }}>Status</th>
-                                    <th style={{ padding: '1rem', fontSize: '0.75rem', fontWeight: '600', color: '#4B5563', textTransform: 'uppercase' }}>Actions</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {filteredData.map((item, idx) => {
-                                    const statusStyle = getStatusStyle(item.status);
-                                    return (
-                                        <tr key={`${item.class_id}-${item.student_id}`} style={{ borderBottom: idx === filteredData.length - 1 ? 'none' : '1px solid #F3F4F6', transition: 'background-color 0.2s' }}>
-                                            <td style={{ padding: '1rem' }}>
-                                                <div style={{ fontWeight: '600', color: '#111827' }}>{item.student_name}</div>
-                                            </td>
-                                            <td style={{ padding: '1rem' }}>
-                                                <div style={{ fontSize: '0.875rem', color: '#4B5563' }}>{item.batch_name}</div>
-                                                <div style={{ fontSize: '0.75rem', color: '#9CA3AF' }}>{item.course_title}</div>
-                                            </td>
-                                            <td style={{ padding: '1rem' }}>
-                                                <div style={{ fontSize: '0.875rem', fontWeight: '500', color: '#111827' }}>{item.class_title}</div>
-                                                {item.topic && <div style={{ fontSize: '0.75rem', color: '#6B7280' }}>Topic: {item.topic}</div>}
-                                            </td>
-                                            <td style={{ padding: '1rem' }}>
-                                                <div style={{ fontSize: '0.875rem', color: '#4B5563' }}>
-                                                    {new Date(item.schedule).toLocaleDateString()}
-                                                </div>
-                                                <div style={{ fontSize: '0.75rem', color: '#9CA3AF' }}>
-                                                    {new Date(item.schedule).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                                                </div>
-                                            </td>
-                                            <td style={{ padding: '1rem' }}>
-                                                <span style={{ 
-                                                    display: 'inline-flex', alignItems: 'center', gap: '0.25rem',
-                                                    padding: '0.25rem 0.625rem', borderRadius: '9999px',
-                                                    fontSize: '0.75rem', fontWeight: '600',
-                                                    ...statusStyle
-                                                }}>
-                                                    {statusStyle.icon}
-                                                    {item.status}
-                                                </span>
-                                            </td>
-                                            <td style={{ padding: '1rem' }}>
-                                                <div style={{ display: 'flex', gap: '0.5rem' }}>
-                                                    <button 
-                                                        onClick={() => handleMarkAttendance(item.class_id, item.student_id, 'Present')}
-                                                        style={{ 
-                                                            padding: '0.4rem', borderRadius: '0.375rem', border: '1px solid #16A34A',
-                                                            backgroundColor: item.status === 'Present' ? '#DCFCE7' : 'white',
-                                                            color: '#16A34A', cursor: 'pointer', transition: 'all 0.2s'
-                                                        }}
-                                                        title="Mark Present"
-                                                    >
-                                                        <CheckCircle size={16} />
-                                                    </button>
-                                                    <button 
-                                                        onClick={() => handleMarkAttendance(item.class_id, item.student_id, 'Absent')}
-                                                        style={{ 
-                                                            padding: '0.4rem', borderRadius: '0.375rem', border: '1px solid #DC2626',
-                                                            backgroundColor: item.status === 'Absent' ? '#FEE2E2' : 'white',
-                                                            color: '#DC2626', cursor: 'pointer', transition: 'all 0.2s'
-                                                        }}
-                                                        title="Mark Absent"
-                                                    >
-                                                        <XCircle size={16} />
-                                                    </button>
-                                                </div>
-                                            </td>
-                                        </tr>
-                                    );
-                                })}
-                            </tbody>
-                        </table>
+                <>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem', marginBottom: '2rem' }}>
+                        <Card style={{ padding: '1.5rem' }}>
+                            <h3 style={{ fontWeight: '800', marginBottom: '1.5rem', color: '#1e293b' }}>Attendance Overview</h3>
+                            <div style={{ height: '300px', display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: '#f8fafc', borderRadius: '12px', color: '#94a3b8' }}>
+                                <div style={{ textAlign: 'center' }}>
+                                    <BarChart size={48} style={{ marginBottom: '1rem', opacity: 0.5 }} />
+                                    <p style={{ fontSize: '0.875rem' }}>Analytical Visualization (Recharts Integration Pending)</p>
+                                    <p style={{ fontSize: '0.75rem' }}>Present: {filteredData.filter(d => d.status === 'Present').length} | Absent: {filteredData.filter(d => d.status === 'Absent').length}</p>
+                                </div>
+                            </div>
+                        </Card>
+                        <Card style={{ padding: '1.5rem' }}>
+                            <h3 style={{ fontWeight: '800', marginBottom: '1.5rem', color: '#1e293b' }}>Quick Stats</h3>
+                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                                <div style={{ padding: '1rem', background: '#dcfce7', borderRadius: '12px', textAlign: 'center' }}>
+                                    <div style={{ fontSize: '1.5rem', fontWeight: '900', color: '#166534' }}>
+                                        {filteredData.length > 0 ? Math.round((filteredData.filter(d => d.status === 'Present').length / filteredData.length) * 100) : 0}%
+                                    </div>
+                                    <div style={{ fontSize: '0.75rem', fontWeight: '700', color: '#166534', textTransform: 'uppercase' }}>Avg Attendance</div>
+                                </div>
+                                <div style={{ padding: '1rem', background: '#e0e7ff', borderRadius: '12px', textAlign: 'center' }}>
+                                    <div style={{ fontSize: '1.5rem', fontWeight: '900', color: '#3730a3' }}>
+                                        {new Set(filteredData.map(d => d.student_id)).size}
+                                    </div>
+                                    <div style={{ fontSize: '0.75rem', fontWeight: '700', color: '#3730a3', textTransform: 'uppercase' }}>Tracked Students</div>
+                                </div>
+                            </div>
+                        </Card>
+                    </div>
+
+                    <div style={{ backgroundColor: 'white', borderRadius: '1rem', border: '1px solid #E5E7EB', overflow: 'hidden', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)' }}>
+                        <div style={{ overflowX: 'auto' }}>
+                            <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
+                                <thead style={{ backgroundColor: '#F9FAFB', borderBottom: '1px solid #E5E7EB' }}>
+                                    <tr>
+                                        <th style={{ padding: '1rem', fontSize: '0.75rem', fontWeight: '600', color: '#4B5563', textTransform: 'uppercase' }}>Student</th>
+                                        <th style={{ padding: '1rem', fontSize: '0.75rem', fontWeight: '600', color: '#4B5563', textTransform: 'uppercase' }}>Batch / Course</th>
+                                        <th style={{ padding: '1rem', fontSize: '0.75rem', fontWeight: '600', color: '#4B5563', textTransform: 'uppercase' }}>Class / Topic</th>
+                                        <th style={{ padding: '1rem', fontSize: '0.75rem', fontWeight: '600', color: '#4B5563', textTransform: 'uppercase' }}>Date & Time</th>
+                                        <th style={{ padding: '1rem', fontSize: '0.75rem', fontWeight: '600', color: '#4B5563', textTransform: 'uppercase' }}>Status</th>
+                                        <th style={{ padding: '1rem', fontSize: '0.75rem', fontWeight: '600', color: '#4B5563', textTransform: 'uppercase' }}>Actions</th>
+                                    </tr>
+                                </thead>
+
+                        <tbody>
+                            {(filteredData || []).map((item, idx) => {
+                                const statusStyle = getStatusStyle(item.status);
+                                return (
+                                    <tr key={`${item.class_id}-${item.student_id}`} style={{ borderBottom: idx === filteredData.length - 1 ? 'none' : '1px solid #F3F4F6', transition: 'background-color 0.2s' }}>
+                                        <td style={{ padding: '1rem' }}>
+                                            <div style={{ fontWeight: '600', color: '#111827' }}>{item.student_name}</div>
+                                        </td>
+                                        <td style={{ padding: '1rem' }}>
+                                            <div style={{ fontSize: '0.875rem', color: '#4B5563' }}>{item.batch_name}</div>
+                                            <div style={{ fontSize: '0.75rem', color: '#9CA3AF' }}>{item.course_title}</div>
+                                        </td>
+                                        <td style={{ padding: '1rem' }}>
+                                            <div style={{ fontSize: '0.875rem', fontWeight: '500', color: '#111827' }}>{item.class_title}</div>
+                                            {item.topic && <div style={{ fontSize: '0.75rem', color: '#6B7280' }}>Topic: {item.topic}</div>}
+                                        </td>
+                                        <td style={{ padding: '1rem' }}>
+                                            <div style={{ fontSize: '0.875rem', color: '#4B5563' }}>
+                                                {new Date(item.schedule).toLocaleDateString()}
+                                            </div>
+                                            <div style={{ fontSize: '0.75rem', color: '#9CA3AF' }}>
+                                                {new Date(item.schedule).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                            </div>
+                                        </td>
+                                        <td style={{ padding: '1rem' }}>
+                                            <span style={{ 
+                                                display: 'inline-flex', alignItems: 'center', gap: '0.25rem',
+                                                padding: '0.25rem 0.625rem', borderRadius: '9999px',
+                                                fontSize: '0.75rem', fontWeight: '600',
+                                                ...statusStyle
+                                            }}>
+                                                {statusStyle.icon}
+                                                {item.status}
+                                            </span>
+                                        </td>
+                                        <td style={{ padding: '1rem' }}>
+                                            <div style={{ display: 'flex', gap: '0.5rem' }}>
+                                                <button 
+                                                    onClick={() => handleMarkAttendance(item.class_id, item.student_id, 'Present')}
+                                                    style={{ 
+                                                        padding: '0.4rem', borderRadius: '0.375rem', border: '1px solid #16A34A',
+                                                        backgroundColor: item.status === 'Present' ? '#DCFCE7' : 'white',
+                                                        color: '#16A34A', cursor: 'pointer', transition: 'all 0.2s'
+                                                    }}
+                                                    title="Mark Present"
+                                                >
+                                                    <CheckCircle size={16} />
+                                                </button>
+                                                <button 
+                                                    onClick={() => handleMarkAttendance(item.class_id, item.student_id, 'Absent')}
+                                                    style={{ 
+                                                        padding: '0.4rem', borderRadius: '0.375rem', border: '1px solid #DC2626',
+                                                        backgroundColor: item.status === 'Absent' ? '#FEE2E2' : 'white',
+                                                        color: '#DC2626', cursor: 'pointer', transition: 'all 0.2s'
+                                                    }}
+                                                    title="Mark Absent"
+                                                >
+                                                    <XCircle size={16} />
+                                                </button>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                );
+                            })}
+                        </tbody>
+                    </table>
                     </div>
                 </div>
+                </>
             )}
             <style>{`
                 @keyframes fadeIn {

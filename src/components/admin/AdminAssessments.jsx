@@ -20,7 +20,9 @@ const AdminAssessments = () => {
     const [tests, setTests] = useState([]);
     const [courses, setCourses] = useState([]); // Add courses state
     const [testResults, setTestResults] = useState([]);
+    const [assignmentSubmissions, setAssignmentSubmissions] = useState([]);
     const [loadingData, setLoadingData] = useState(false);
+    const [resultsSubTab, setResultsSubTab] = useState('tests'); // 'tests' or 'assignments'
 
     // Modal State
     const [isAssignmentModalOpen, setIsAssignmentModalOpen] = useState(false);
@@ -40,9 +42,9 @@ const AdminAssessments = () => {
         title: '', description: '', due_date: '',
         type: 'standard', problem_statement: '', starter_code: '', expected_output: '',
         difficulty: 'Easy', test_cases: '[]',
-        course_id: '' // Add course_id
+        course_id: '', module_id: ''
     });
-    const [testForm, setTestForm] = useState({ title: '', duration: '', total_marks: '', type: 'MCQ', questions: [], course_id: '' });
+    const [testForm, setTestForm] = useState({ title: '', duration: '', total_marks: '', type: 'MCQ', questions: [], course_id: '', module_id: '' });
 
     // For Mock Test Questions
     const [questionsJson, setQuestionsJson] = useState('[]');
@@ -76,14 +78,16 @@ const AdminAssessments = () => {
     const fetchModuleContent = async (moduleId) => {
         setLoadingData(true);
         try {
-            const [assRes, testRes, resultsRes] = await Promise.all([
+            const [assRes, testRes, resultsRes, subRes] = await Promise.all([
                 api.get(`modules/${moduleId}/assignments`),
                 api.get(`modules/${moduleId}/tests`),
-                api.get('admin/test-results')
+                api.get('admin/test-results'),
+                api.get('admin/submissions')
             ]);
             setAssignments(assRes.data);
             setTests(testRes.data);
             setTestResults(resultsRes.data);
+            setAssignmentSubmissions(subRes.data);
         } catch (error) {
             console.error("Failed to fetch content", error);
         } finally {
@@ -95,18 +99,26 @@ const AdminAssessments = () => {
         e.preventDefault();
         setSubmitting(true);
         try {
-            await api.post(`modules/${selectedModuleId}/assignments`, assignmentForm);
-            await fetchModuleContent(selectedModuleId);
+            const targetModule = assignmentForm.module_id || selectedModuleId;
+            if (!targetModule) {
+                alert("Please select a target module.");
+                setSubmitting(false);
+                return;
+            }
+            await api.post(`modules/${targetModule}/assignments`, assignmentForm);
+            if (targetModule === selectedModuleId) {
+                await fetchModuleContent(selectedModuleId);
+            }
             setIsAssignmentModalOpen(false);
             setAssignmentForm({
                 title: '', description: '', due_date: '',
                 type: 'standard', problem_statement: '', starter_code: '', expected_output: '',
                 difficulty: 'Easy', test_cases: '[]',
-                course_id: ''
+                course_id: '', module_id: ''
             });
-            alert("Assignment created!");
+            alert("Assignment initialized successfully!");
         } catch (error) {
-            alert("Error creating assignment");
+            alert("Error initializing assignment.");
         } finally {
             setSubmitting(false);
         }
@@ -140,6 +152,13 @@ const AdminAssessments = () => {
         e.preventDefault();
         setSubmitting(true);
         try {
+            const targetModule = testForm.module_id || selectedModuleId;
+            if (!targetModule) {
+                alert("Please select a target module.");
+                setSubmitting(false);
+                return;
+            }
+
             let parsedQuestions = [];
             try {
                 parsedQuestions = JSON.parse(questionsJson);
@@ -149,17 +168,19 @@ const AdminAssessments = () => {
                 return;
             }
 
-            await api.post(`modules/${selectedModuleId}/tests`, {
+            await api.post(`modules/${targetModule}/tests`, {
                 ...testForm,
                 questions: parsedQuestions
             });
-            await fetchModuleContent(selectedModuleId);
+            if (targetModule === selectedModuleId) {
+                await fetchModuleContent(selectedModuleId);
+            }
             setIsTestModalOpen(false);
-            setTestForm({ title: '', duration: '', total_marks: '', type: 'MCQ', questions: [], course_id: '' });
+            setTestForm({ title: '', duration: '', total_marks: '', type: 'MCQ', questions: [], course_id: '', module_id: '' });
             setQuestionsJson('[]');
-            alert("Test created!");
+            alert("Mock assessment initialized successfully!");
         } catch (error) {
-            console.error("Create test error:", error);
+            console.error("Initialize assessment error:", error);
             const msg = error.response?.data?.message || error.message;
             alert(`Failed: ${msg}`);
         } finally {
@@ -231,11 +252,13 @@ const AdminAssessments = () => {
                         <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3 }}>
                             <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '1.5rem' }}>
                                 <Button
-                                    onClick={() => setIsAssignmentModalOpen(true)}
-                                    disabled={!selectedModuleId}
-                                    style={{ borderRadius: '12px', fontWeight: '900', background: 'linear-gradient(90deg, #60a5fa, #818cf8)', border: 'none', color: '#ffffff' }}
+                                    onClick={() => {
+                                        setAssignmentForm({...assignmentForm, module_id: selectedModuleId});
+                                        setIsAssignmentModalOpen(true);
+                                    }}
+                                    style={{ borderRadius: '12px', fontWeight: '900', background: 'linear-gradient(135deg, #4F46E5, #9333EA)', border: 'none', color: '#ffffff', boxShadow: '0 4px 15px rgba(79, 70, 229, 0.3)' }}
                                 >
-                                    <Plus size={18} /> INITIALIZE ASSIGNMENT
+                                    <Plus size={18} style={{ marginRight: '0.5rem' }} /> INITIALIZE ASSIGNMENT
                                 </Button>
                             </div>
                             <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
@@ -307,7 +330,13 @@ const AdminAssessments = () => {
                             {activeTab === 'tests' && (
                                 <div>
                                     <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '1.5rem' }}>
-                                        <Button onClick={() => setIsTestModalOpen(true)} style={{ background: 'linear-gradient(90deg, #60a5fa, #818cf8)', color: 'white', borderRadius: '0.5rem', padding: '0.75rem 1.5rem', fontWeight: '800', border: 'none' }}>
+                                        <Button 
+                                            onClick={() => {
+                                                setTestForm({...testForm, module_id: selectedModuleId});
+                                                setIsTestModalOpen(true);
+                                            }} 
+                                            style={{ background: 'linear-gradient(135deg, #4F46E5, #9333EA)', color: 'white', borderRadius: '12px', padding: '0.75rem 1.5rem', fontWeight: '900', border: 'none', boxShadow: '0 4px 15px rgba(79, 70, 229, 0.3)' }}
+                                        >
                                             <Plus size={16} style={{ marginRight: '0.5rem' }} /> INITIALIZE MOCK TEST
                                         </Button>
                                     </div>
@@ -336,23 +365,47 @@ const AdminAssessments = () => {
                     {/* Test Results Tab */}
                     {activeTab === 'results' && (
                         <div>
-                            <div style={{ overflowX: 'auto', backgroundColor: 'white', borderRadius: '0.5rem', border: '1px solid var(--border-color)' }}>
-                                <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
-                                    <thead>
-                                        <tr style={{ backgroundColor: 'var(--light)', borderBottom: '1px solid var(--border-color)' }}>
-                                            <th style={{ padding: '1rem' }}>Student</th>
-                                            <th style={{ padding: '1rem' }}>Course</th>
-                                            <th style={{ padding: '1rem' }}>Module</th>
-                                            <th style={{ padding: '1rem' }}>Test</th>
-                                            <th style={{ padding: '1rem' }}>Score</th>
-                                            <th style={{ padding: '1rem' }}>Date</th>
-                                            <th style={{ padding: '1rem' }}>Actions</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
+                            <div style={{ display: 'flex', gap: '1rem', marginBottom: '1.5rem' }}>
+                                <Button 
+                                    variant={resultsSubTab === 'tests' ? 'primary' : 'outline'} 
+                                    onClick={() => setResultsSubTab('tests')}
+                                    style={{ borderRadius: '12px' }}
+                                >
+                                    Mock Test Results
+                                </Button>
+                                <Button 
+                                    variant={resultsSubTab === 'assignments' ? 'primary' : 'outline'} 
+                                    onClick={() => setResultsSubTab('assignments')}
+                                    style={{ borderRadius: '12px' }}
+                                >
+                                    Assignment Submissions
+                                </Button>
+                            </div>
+
+                            {resultsSubTab === 'tests' && (
+                                <div style={{ overflowX: 'auto', backgroundColor: 'white', borderRadius: '0.5rem', border: '1px solid var(--border-color)' }}>
+                                    <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
+                                        <thead>
+                                            <tr style={{ backgroundColor: 'var(--light)', borderBottom: '1px solid var(--border-color)' }}>
+                                                <th style={{ padding: '1rem' }}>Student</th>
+                                                <th style={{ padding: '1rem' }}>Batch</th>
+                                                <th style={{ padding: '1rem' }}>Course</th>
+                                                <th style={{ padding: '1rem' }}>Module</th>
+                                                <th style={{ padding: '1rem' }}>Test</th>
+                                                <th style={{ padding: '1rem' }}>Score</th>
+                                                <th style={{ padding: '1rem' }}>Date</th>
+                                                <th style={{ padding: '1rem' }}>Actions</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
                                         {testResults.map(r => (
                                             <tr key={r.id} style={{ borderBottom: '1px solid var(--border-color)' }}>
                                                 <td style={{ padding: '1rem', fontWeight: 'bold' }}>{r.student_name}</td>
+                                                <td style={{ padding: '1rem' }}>
+                                                    <span style={{ backgroundColor: '#e2e8f0', color: '#475569', padding: '0.2rem 0.6rem', borderRadius: '1rem', fontSize: '0.8rem', fontWeight: 'bold' }}>
+                                                        {r.batch_name || 'No Batch'}
+                                                    </span>
+                                                </td>
                                                 <td style={{ padding: '1rem' }}>{r.course_title}</td>
                                                 <td style={{ padding: '1rem' }}>{r.module_title || 'Direct'}</td>
                                                 <td style={{ padding: '1rem' }}>{r.test_title}</td>
@@ -387,7 +440,7 @@ const AdminAssessments = () => {
                                         ))}
                                         {testResults.length === 0 && (
                                             <tr>
-                                                <td colSpan="6" style={{ padding: '2rem', textAlign: 'center', color: 'var(--text-light)' }}>
+                                                <td colSpan="7" style={{ padding: '2rem', textAlign: 'center', color: 'var(--text-light)' }}>
                                                     No test results available yet.
                                                 </td>
                                             </tr>
@@ -395,6 +448,53 @@ const AdminAssessments = () => {
                                     </tbody>
                                 </table>
                             </div>
+                            )}
+
+                            {resultsSubTab === 'assignments' && (
+                                <div style={{ overflowX: 'auto', backgroundColor: 'white', borderRadius: '0.5rem', border: '1px solid var(--border-color)' }}>
+                                    <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
+                                        <thead>
+                                            <tr style={{ backgroundColor: 'var(--light)', borderBottom: '1px solid var(--border-color)' }}>
+                                                <th style={{ padding: '1rem' }}>Student</th>
+                                                <th style={{ padding: '1rem' }}>Batch</th>
+                                                <th style={{ padding: '1rem' }}>Course</th>
+                                                <th style={{ padding: '1rem' }}>Module</th>
+                                                <th style={{ padding: '1rem' }}>Assignment</th>
+                                                <th style={{ padding: '1rem' }}>Score/Grade</th>
+                                                <th style={{ padding: '1rem' }}>Date</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {assignmentSubmissions.map(s => (
+                                                <tr key={s.id} style={{ borderBottom: '1px solid var(--border-color)' }}>
+                                                    <td style={{ padding: '1rem', fontWeight: 'bold' }}>{s.student_name}</td>
+                                                    <td style={{ padding: '1rem' }}>
+                                                        <span style={{ backgroundColor: '#e2e8f0', color: '#475569', padding: '0.2rem 0.6rem', borderRadius: '1rem', fontSize: '0.8rem', fontWeight: 'bold' }}>
+                                                            {s.batch_name || 'No Batch'}
+                                                        </span>
+                                                    </td>
+                                                    <td style={{ padding: '1rem' }}>{s.course_title}</td>
+                                                    <td style={{ padding: '1rem' }}>{s.module_title || 'Direct'}</td>
+                                                    <td style={{ padding: '1rem' }}>{s.assignment_title}</td>
+                                                    <td style={{ padding: '1rem', fontWeight: 'bold', color: s.grade ? '#16A34A' : (s.score ? '#2563EB' : '#F59E0B') }}>
+                                                        {s.grade || (s.score ? `${s.score}/100` : 'Pending')}
+                                                    </td>
+                                                    <td style={{ padding: '1rem', color: 'var(--text-light)', fontSize: '0.875rem' }}>
+                                                        {new Date(s.submitted_at).toLocaleDateString()}
+                                                    </td>
+                                                </tr>
+                                            ))}
+                                            {assignmentSubmissions.length === 0 && (
+                                                <tr>
+                                                    <td colSpan="7" style={{ padding: '2rem', textAlign: 'center', color: 'var(--text-light)' }}>
+                                                        No assignment submissions available yet.
+                                                    </td>
+                                                </tr>
+                                            )}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            )}
                         </div>
                     )}
                 </div>
@@ -409,17 +509,31 @@ const AdminAssessments = () => {
                             <button onClick={() => setIsAssignmentModalOpen(false)} style={{ background: 'none', border: 'none', cursor: 'pointer' }}><X size={20} /></button>
                         </div>
                         <form onSubmit={handleCreateAssignment}>
-                            <div style={{ marginBottom: '1rem' }}>
-                                <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500' }}>Target Course *</label>
-                                <select
-                                    value={assignmentForm.course_id}
-                                    onChange={e => setAssignmentForm({ ...assignmentForm, course_id: e.target.value })}
-                                    required
-                                    style={{ width: '100%', padding: '0.75rem', borderRadius: '0.375rem', border: '1px solid #D1D5DB' }}
-                                >
-                                    <option value="">-- Select Course --</option>
-                                    {courses.map(c => <option key={c.id} value={c.id}>{c.title}</option>)}
-                                </select>
+                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1rem' }}>
+                                <div style={{ display: 'flex', flexDirection: 'column' }}>
+                                    <label style={{ marginBottom: '0.5rem', fontWeight: '700', fontSize: '0.85rem', color: '#475569' }}>Target Module *</label>
+                                    <select
+                                        value={assignmentForm.module_id}
+                                        onChange={e => setAssignmentForm({ ...assignmentForm, module_id: e.target.value })}
+                                        required
+                                        style={{ padding: '0.75rem', borderRadius: '12px', border: '1px solid #cbd5e1', background: '#f8fafc', fontWeight: '600' }}
+                                    >
+                                        <option value="">-- Select Module --</option>
+                                        {modules.map(m => <option key={m.id} value={m.id}>{m.title}</option>)}
+                                    </select>
+                                </div>
+                                <div style={{ display: 'flex', flexDirection: 'column' }}>
+                                    <label style={{ marginBottom: '0.5rem', fontWeight: '700', fontSize: '0.85rem', color: '#475569' }}>Target Course *</label>
+                                    <select
+                                        value={assignmentForm.course_id}
+                                        onChange={e => setAssignmentForm({ ...assignmentForm, course_id: e.target.value })}
+                                        required
+                                        style={{ padding: '0.75rem', borderRadius: '12px', border: '1px solid #cbd5e1', background: '#f8fafc', fontWeight: '600' }}
+                                    >
+                                        <option value="">-- Select Course --</option>
+                                        {courses.map(c => <option key={c.id} value={c.id}>{c.title}</option>)}
+                                    </select>
+                                </div>
                             </div>
 
                             <Input label="Title" value={assignmentForm.title} onChange={e => setAssignmentForm({ ...assignmentForm, title: e.target.value })} required />
@@ -476,17 +590,31 @@ const AdminAssessments = () => {
                             <button onClick={() => setIsTestModalOpen(false)} style={{ background: 'none', border: 'none', cursor: 'pointer' }}><X size={20} /></button>
                         </div>
                         <form onSubmit={handleCreateTest}>
-                            <div style={{ marginBottom: '1rem' }}>
-                                <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500' }}>Target Course *</label>
-                                <select
-                                    value={testForm.course_id}
-                                    onChange={e => setTestForm({ ...testForm, course_id: e.target.value })}
-                                    required
-                                    style={{ width: '100%', padding: '0.75rem', borderRadius: '0.375rem', border: '1px solid #D1D5DB' }}
-                                >
-                                    <option value="">-- Select Course --</option>
-                                    {courses.map(c => <option key={c.id} value={c.id}>{c.title}</option>)}
-                                </select>
+                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1rem' }}>
+                                <div style={{ display: 'flex', flexDirection: 'column' }}>
+                                    <label style={{ marginBottom: '0.5rem', fontWeight: '700', fontSize: '0.85rem', color: '#475569' }}>Target Module *</label>
+                                    <select
+                                        value={testForm.module_id}
+                                        onChange={e => setTestForm({ ...testForm, module_id: e.target.value })}
+                                        required
+                                        style={{ padding: '0.75rem', borderRadius: '12px', border: '1px solid #cbd5e1', background: '#f8fafc', fontWeight: '600' }}
+                                    >
+                                        <option value="">-- Select Module --</option>
+                                        {modules.map(m => <option key={m.id} value={m.id}>{m.title}</option>)}
+                                    </select>
+                                </div>
+                                <div style={{ display: 'flex', flexDirection: 'column' }}>
+                                    <label style={{ marginBottom: '0.5rem', fontWeight: '700', fontSize: '0.85rem', color: '#475569' }}>Target Course *</label>
+                                    <select
+                                        value={testForm.course_id}
+                                        onChange={e => setTestForm({ ...testForm, course_id: e.target.value })}
+                                        required
+                                        style={{ padding: '0.75rem', borderRadius: '12px', border: '1px solid #cbd5e1', background: '#f8fafc', fontWeight: '600' }}
+                                    >
+                                        <option value="">-- Select Course --</option>
+                                        {courses.map(c => <option key={c.id} value={c.id}>{c.title}</option>)}
+                                    </select>
+                                </div>
                             </div>
                             <Input label="Title" value={testForm.title} onChange={e => setTestForm({ ...testForm, title: e.target.value })} required />
                             <Input label="Duration (mins)" type="number" value={testForm.duration} onChange={e => setTestForm({ ...testForm, duration: e.target.value })} required />
@@ -656,11 +784,12 @@ const AdminAssessments = () => {
 
 const modalStyle = {
     position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
-    backgroundColor: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000
+    backgroundColor: 'rgba(15, 23, 42, 0.6)', backdropFilter: 'blur(8px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000
 };
 
 const modalContentStyle = {
-    backgroundColor: 'white', padding: '2rem', borderRadius: '0.5rem', width: '90%', maxWidth: '500px', maxHeight: '90vh', overflowY: 'auto'
+    backgroundColor: 'white', padding: '2.5rem', borderRadius: '12px', width: '90%', maxWidth: '500px', maxHeight: '90vh', overflowY: 'auto',
+    boxShadow: '0 25px 50px -12px rgba(0,0,0,0.25)', border: '1px solid #e2e8f0'
 };
 
 export default AdminAssessments;

@@ -130,17 +130,29 @@ const AttendanceDashboard = () => {
     const handleExport = async () => {
         try {
             const res = await api.get(`attendance/reports/export?batch_id=${selectedBatch}`);
-            const data = res.data;
-            if (!data || data.length === 0) return alert('No data to export.');
+            const rawData = res.data;
+            if (!rawData || rawData.length === 0) return alert('No data to export.');
             
-            const headers = Object.keys(data[0]);
-            const rows = data.map(obj => headers.map(header => `"${obj[header]}"`));
+            const headers = Object.keys(rawData[0]);
             
-            let csvContent = "data:text/csv;charset=utf-8," + headers.join(",") + "\n" + rows.map(e => e.join(",")).join("\n");
-            const encodedUri = encodeURI(csvContent);
+            // Helper to escape CSV values
+            const csvEscape = (val) => {
+                if (val === null || val === undefined) return '';
+                const s = String(val);
+                if (s.includes(',') || s.includes('"') || s.includes('\n')) {
+                    return `"${s.replace(/"/g, '""')}"`;
+                }
+                return s;
+            };
+
+            const rows = rawData.map(obj => headers.map(header => csvEscape(obj[header])));
+            
+            const csvContent = [headers.join(','), ...rows.map(r => r.join(','))].join('\n');
+            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+            const url = URL.createObjectURL(blob);
             const link = document.createElement("a");
-            link.setAttribute("href", encodedUri);
-            link.setAttribute("download", `attendance_export_${new Date().getTime()}.csv`);
+            link.setAttribute("href", url);
+            link.setAttribute("download", `attendance_batch_${selectedBatch}_${new Date().toISOString().split('T')[0]}.csv`);
             document.body.appendChild(link);
             link.click();
             document.body.removeChild(link);

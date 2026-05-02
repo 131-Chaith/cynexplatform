@@ -1,8 +1,21 @@
 import express from 'express';
 import { db } from '../db.js';
 import { authenticateToken, authorizeRole } from '../middleware/authMiddleware.js';
+import bcrypt from 'bcryptjs';
 
 const router = express.Router();
+
+// Helper for logging actions
+const logAdminAction = async (userId, action, module, details) => {
+    try {
+        await db.execute({
+            sql: "INSERT INTO audit_logs (user_id, action, module, details) VALUES (?, ?, ?, ?)",
+            args: [userId, action, module, JSON.stringify(details)]
+        });
+    } catch (e) {
+        console.error("Audit log failed:", e);
+    }
+};
 
 // Get All Students
 router.get('/students', authenticateToken, authorizeRole('admin'), async (req, res) => {
@@ -25,6 +38,23 @@ router.get('/students', authenticateToken, authorizeRole('admin'), async (req, r
         res.json(result.rows);
     } catch (error) {
         console.error("Error in GET /admin/students:", error);
+        res.status(500).json({ message: error.message });
+    }
+});
+
+// Get All Issued Certificates (Admin)
+router.get('/certificates-all', authenticateToken, authorizeRole('admin'), async (req, res) => {
+    try {
+        const result = await db.execute(`
+            SELECT cert.*, u.name as student_name, co.title as course_title, b.batch_name
+            FROM certificates cert
+            JOIN users u ON cert.student_id = u.id
+            JOIN courses co ON cert.course_id = co.id
+            LEFT JOIN batches b ON u.batch_id = b.id
+            ORDER BY cert.issue_date DESC
+        `);
+        res.json(result.rows);
+    } catch (error) {
         res.status(500).json({ message: error.message });
     }
 });
@@ -162,11 +192,12 @@ router.get('/students/:id/enrollments', authenticateToken, authorizeRole('admin'
 router.get('/certificates/requests', authenticateToken, authorizeRole('admin'), async (req, res) => {
     try {
         const result = await db.execute(`
-            SELECT cr.*, u.name as student_name, c.title as course_title 
+            SELECT cr.*, u.name as student_name, c.title as course_title, b.batch_name
             FROM certificate_requests cr
             JOIN users u ON cr.student_id = u.id
             JOIN courses c ON cr.course_id = c.id
-            WHERE cr.status = 'pending'
+            LEFT JOIN batches b ON u.batch_id = b.id
+            ORDER BY cr.request_date DESC
         `);
         res.json(result.rows);
     } catch (error) {
@@ -235,11 +266,12 @@ router.post('/certificates/reject/:id', authenticateToken, authorizeRole('admin'
             });
         }
 
-        res.json({ message: "Certificate Request Rejected" });
+        res.json({ message: "Certificate Rejected" });
     } catch (error) {
         res.status(500).json({ message: error.message });
     }
 });
+
 
 // Update Student
 router.put('/students/:id', authenticateToken, authorizeRole('admin'), async (req, res) => {
@@ -393,15 +425,14 @@ router.delete('/students/:id', authenticateToken, authorizeRole('admin'), async 
 router.get('/test-results', authenticateToken, authorizeRole('admin'), async (req, res) => {
     try {
         const result = await db.execute(`
-            SELECT tr.*, u.name as student_name, t.title as test_title, t.questions, 
+            SELECT tr.*, u.name as student_name, b.batch_name, t.title as test_title, t.questions, 
                    c.title as course_title, m.title as module_title
             FROM test_results tr
             JOIN users u ON tr.student_id = u.id
+            LEFT JOIN batches b ON u.batch_id = b.id
             JOIN mock_tests t ON tr.test_id = t.id
             LEFT JOIN modules m ON t.module_id = m.id
-            LEFT JOIN course_modules cm ON m.id = cm.module_id
-            LEFT JOIN courses c ON (t.course_id = c.id OR cm.course_id = c.id)
-            GROUP BY tr.id -- Prevent duplicates if a module is in multiple courses
+            LEFT JOIN courses c ON t.course_id = c.id
             ORDER BY tr.completed_at DESC
         `);
 
@@ -422,15 +453,14 @@ router.get('/test-results', authenticateToken, authorizeRole('admin'), async (re
 router.get('/submissions', authenticateToken, authorizeRole('admin'), async (req, res) => {
     try {
         const result = await db.execute(`
-            SELECT s.*, u.name as student_name, a.title as assignment_title, 
+            SELECT s.*, u.name as student_name, b.batch_name, a.title as assignment_title, 
                    m.title as module_title, c.title as course_title
             FROM submissions s
             JOIN users u ON s.student_id = u.id
+            LEFT JOIN batches b ON u.batch_id = b.id
             JOIN assignments a ON s.assignment_id = a.id
             LEFT JOIN modules m ON a.module_id = m.id
-            LEFT JOIN course_modules cm ON m.id = cm.module_id
-            LEFT JOIN courses c ON (a.course_id = c.id OR cm.course_id = c.id)
-            GROUP BY s.id
+            LEFT JOIN courses c ON a.course_id = c.id
             ORDER BY s.submitted_at DESC
         `);
         res.json(result.rows);
@@ -532,6 +562,119 @@ router.post('/settings', authenticateToken, async (req, res) => {
     } catch (error) {
         res.status(500).json({ message: error.message });
     }
+});
+
+// --- NEW DASHBOARD SETTINGS MODULES ---
+
+// 1. User Management (All Roles)
+router.get('/all-users', authenticateToken, authorizeRole('admin'), async (req, res) => {
+    try {
+        const result = await db.execute("SELECT id, name, email, role, created_at, batch_id FROM users ORDER BY created_at DESC");
+        res.json(result.rows);
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+});
+
+// 2. Exam Management
+router.get('/exams', authenticateToken, authorizeRole('admin'), async (req, res) => {
+    try {
+        const result = await db.execute("SELECT * FROM exams ORDER BY created_at DESC");
+        res.json(result.rows);
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+});
+
+router.post('/exams', authenticateToken, authorizeRole('admin'), async (req, res) => {
+    const { title, duration_minutes, meet_link } = req.body;
+    try {
+        await db.execute({
+            sql: "INSERT INTO exams (title, duration_minutes, meet_link) VALUES (?, ?, ?)",
+            args: [title, duration_minutes, meet_link]
+        });
+        res.status(201).json({ message: "Exam created successfully" });
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+});
+
+router.delete('/exams/:id', authenticateToken, authorizeRole('admin'), async (req, res) => {
+    try {
+        await db.execute({
+            sql: "DELETE FROM exams WHERE id = ?",
+            args: [req.params.id]
+        });
+        res.json({ message: "Exam deleted" });
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+});
+
+// 3. Audit Logs
+router.get('/audit-logs', authenticateToken, authorizeRole('admin'), async (req, res) => {
+    try {
+        const result = await db.execute(`
+            SELECT al.*, u.name as user_name 
+            FROM audit_logs al 
+            JOIN users u ON al.user_id = u.id 
+            ORDER BY al.created_at DESC LIMIT 100
+        `);
+        res.json(result.rows);
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+});
+
+// 4. User Management (CRUD for all roles)
+router.post('/users', authenticateToken, authorizeRole('admin'), async (req, res) => {
+    const { name, email, role, batch_id } = req.body;
+    try {
+        const hashedPassword = await bcrypt.hash('Cynex@123', 10); // Default password
+        await db.execute({
+            sql: "INSERT INTO users (name, email, password, role, batch_id) VALUES (?, ?, ?, ?, ?)",
+            args: [name, email, hashedPassword, role, batch_id || null]
+        });
+        await logAdminAction(req.user.id, `Created ${role}: ${name}`, 'User Management', { email, role });
+        res.status(201).json({ message: "Operative onboarded." });
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+});
+
+router.delete('/users/:id', authenticateToken, authorizeRole('admin'), async (req, res) => {
+    try {
+        await db.execute({ sql: "DELETE FROM users WHERE id = ?", args: [req.params.id] });
+        await logAdminAction(req.user.id, `Deleted User ID: ${req.params.id}`, 'User Management', {});
+        res.json({ message: "Operative terminated." });
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+});
+
+router.put('/users/:id/lock', authenticateToken, authorizeRole('admin'), async (req, res) => {
+    const { locked } = req.body;
+    try {
+        await db.execute({
+            sql: "UPDATE users SET locked = ? WHERE id = ?",
+            args: [locked ? 1 : 0, req.params.id]
+        });
+        await logAdminAction(req.user.id, `${locked ? 'Locked' : 'Unlocked'} User ID: ${req.params.id}`, 'Security', {});
+        res.json({ message: "Protocol updated." });
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+});
+
+// 5. Question Bank & Batch Sync (Hooks)
+router.post('/question-bank/import', authenticateToken, authorizeRole('admin'), async (req, res) => {
+    // Placeholder for actual file processing
+    res.json({ message: "Assets integrated." });
+});
+
+router.post('/batches/:id/sync', authenticateToken, authorizeRole('admin'), async (req, res) => {
+    // Placeholder for actual sync logic
+    res.json({ message: "Batch synchronized." });
 });
 
 export default router;

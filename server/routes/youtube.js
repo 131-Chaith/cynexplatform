@@ -1,5 +1,7 @@
 import express from 'express';
-import { google } from 'googleapis';
+import { youtube as googleYoutube } from '@googleapis/youtube';
+import { sheets as googleSheets } from '@googleapis/sheets';
+import { OAuth2Client } from 'google-auth-library';
 import { db } from '../db.js';
 import { authenticateToken, authorizeRole } from '../middleware/authMiddleware.js';
 import dotenv from 'dotenv';
@@ -10,7 +12,7 @@ const router = express.Router();
 
 // ─── OAuth2 Client Setup ────────────────────────────────────────────────────
 const getOAuth2Client = () => {
-    return new google.auth.OAuth2(
+    return new OAuth2Client(
         process.env.YOUTUBE_CLIENT_ID,
         process.env.YOUTUBE_CLIENT_SECRET,
         process.env.YOUTUBE_REDIRECT_URI || 'http://localhost:5002/api/youtube/callback'
@@ -69,7 +71,7 @@ async function getAuthenticatedYoutube() {
         oauth2Client.setCredentials(credentials);
     }
 
-    return google.youtube({ version: 'v3', auth: oauth2Client });
+    return googleYoutube({ version: 'v3', auth: oauth2Client });
 }
 
 // ─── Helper: Get authenticated Sheets client ─────────────────────────────────
@@ -92,7 +94,7 @@ export async function getAuthenticatedSheets() {
         oauth2Client.setCredentials(credentials);
     }
 
-    return google.sheets({ version: 'v4', auth: oauth2Client });
+    return googleSheets({ version: 'v4', auth: oauth2Client });
 }
 
 // ─── Helper: Extract playlist ID from URL or raw ID ─────────────────────────

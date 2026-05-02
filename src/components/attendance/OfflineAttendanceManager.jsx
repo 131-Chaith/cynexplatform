@@ -123,18 +123,37 @@ const OfflineAttendanceManager = ({ userRole }) => {
 
     const exportCSV = () => {
         if (!report?.records?.length) return;
+        
         const headers = ['Student', 'Email', 'Status', 'Time', 'Type', 'Remarks'];
+        
+        // Helper to escape CSV values
+        const csvEscape = (val) => {
+            if (val === null || val === undefined) return '';
+            const s = String(val);
+            if (s.includes(',') || s.includes('"') || s.includes('\n')) {
+                return `"${s.replace(/"/g, '""')}"`;
+            }
+            return s;
+        };
+
         const rows = report.records.map(r => [
-            r.student_name, r.student_email, r.status,
-            r.join_time ? new Date(r.join_time).toLocaleString() : 'N/A',
-            r.attendance_type, r.remarks || ''
+            csvEscape(r.student_name),
+            csvEscape(r.student_email),
+            csvEscape(r.status),
+            csvEscape(r.join_time ? new Date(r.join_time).toLocaleString() : 'N/A'),
+            csvEscape(r.attendance_type),
+            csvEscape(r.remarks || '')
         ]);
-        const csv = [headers, ...rows].map(r => r.join(',')).join('\n');
-        const blob = new Blob([csv], { type: 'text/csv' });
-        const a = document.createElement('a');
-        a.href = URL.createObjectURL(blob);
-        a.download = `offline_session_${selectedSession?.id}_report.csv`;
-        a.click();
+
+        const csvContent = [headers.join(','), ...rows.map(r => r.join(','))].join('\n');
+        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.setAttribute('href', url);
+        link.setAttribute('download', `attendance_report_${selectedSession.topic.replace(/\s+/g, '_')}_${new Date().toISOString().split('T')[0]}.csv`);
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
     };
 
     const renderSessionCard = (s, isActive) => (

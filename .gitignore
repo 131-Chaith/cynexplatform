@@ -130,5 +130,10 @@ db_data.txt
 !/index.html
 !/vercel.json
 
+# Explicitly exclude server subdirectories that are huge
+server/node_modules/
+server/uploads/
+server/local.db
+
 
 

@@ -1,4 +1,5 @@
-import { google } from 'googleapis';
+import { calendar as googleCalendar } from '@googleapis/calendar';
+import { admin as googleAdmin } from '@googleapis/admin';
 import { db } from '../db.js';
 import { getClientForUser } from './googleAuthService.js';
 
@@ -13,7 +14,7 @@ export const createMeetSession = async (userId, topic, startTime, durationMins) 
     const auth = await getClientForUser(userId);
     if (!auth) throw new Error('Google account not connected');
 
-    const calendar = google.calendar({ version: 'v3', auth });
+    const calendar = googleCalendar({ version: 'v3', auth });
     
     const event = {
         summary: topic,
@@ -61,7 +62,7 @@ export const pullMeetAttendance = async (sessionId, instructorId) => {
     const auth = await getClientForUser(instructorId);
     if (!auth) throw new Error('Google account not connected');
 
-    const reports = google.admin({ version: 'reports_v1', auth });
+    const reports = googleAdmin({ version: 'reports_v1', auth });
 
     try {
         const meetCode = session.meet_link ? session.meet_link.split('/').pop() : null;

@@ -1,4 +1,6 @@
-import { google } from 'googleapis';
+import { OAuth2Client } from 'google-auth-library';
+import { calendar as googleCalendar } from '@googleapis/calendar';
+import { admin as googleAdmin } from '@googleapis/admin';
 
 /**
  * Note: Actual implementation requires OAuth2 credentials.
@@ -6,7 +8,7 @@ import { google } from 'googleapis';
  */
 
 export const getOAuthClient = () => {
-    const oauth2Client = new google.auth.OAuth2(
+    const oauth2Client = new OAuth2Client(
         process.env.GOOGLE_CLIENT_ID,
         process.env.GOOGLE_CLIENT_SECRET,
         process.env.GOOGLE_REDIRECT_URI
@@ -15,7 +17,7 @@ export const getOAuthClient = () => {
 };
 
 export const createMeetLink = async (auth, topic, startTime) => {
-    const calendar = google.calendar({ version: 'v3', auth });
+    const calendar = googleCalendar({ version: 'v3', auth });
     
     const event = {
         summary: topic,
@@ -47,7 +49,7 @@ export const createMeetLink = async (auth, topic, startTime) => {
 
 export const getMeetAttendanceReport = async (auth, conferenceId) => {
     // Requires Google Workspace Admin SDK
-    const admin = google.admin({ version: 'reports_v1', auth });
+    const admin = googleAdmin({ version: 'reports_v1', auth });
     
     // This is a simplified fetch - actual implementation depends on Workspace APIs
     const res = await admin.activities.list({

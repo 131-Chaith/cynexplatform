@@ -86,28 +86,9 @@ const StudentCourses = () => {
                     </p>
                 </div>
                 <div style={{ display: 'flex', gap: '1rem', background: '#F1F5F9', padding: '0.5rem', borderRadius: '1rem' }}>
-                    <button
-                        onClick={() => setActiveTab('my-courses')}
-                        style={{
-                            padding: '0.5rem 1rem', borderRadius: '0.5rem', border: 'none', cursor: 'pointer', fontWeight: 'bold',
-                            background: activeTab === 'my-courses' ? 'white' : 'transparent',
-                            color: activeTab === 'my-courses' ? '#2563EB' : '#64748B',
-                            boxShadow: activeTab === 'my-courses' ? '0 1px 3px rgba(0,0,0,0.1)' : 'none'
-                        }}
-                    >
+                    <div style={{ padding: '0.5rem 1rem', borderRadius: '0.5rem', fontWeight: 'bold', color: '#2563EB', background: 'white', boxShadow: '0 1px 3px rgba(0,0,0,0.1)' }}>
                         My Courses ({myCourses.length})
-                    </button>
-                    <button
-                        onClick={() => setActiveTab('catalog')}
-                        style={{
-                            padding: '0.5rem 1rem', borderRadius: '0.5rem', border: 'none', cursor: 'pointer', fontWeight: 'bold',
-                            background: activeTab === 'catalog' ? 'white' : 'transparent',
-                            color: activeTab === 'catalog' ? '#2563EB' : '#64748B',
-                            boxShadow: activeTab === 'catalog' ? '0 1px 3px rgba(0,0,0,0.1)' : 'none'
-                        }}
-                    >
-                        Available Courses ({availableCourses.length})
-                    </button>
+                    </div>
                 </div>
             </div>
 
@@ -121,7 +102,7 @@ const StudentCourses = () => {
                     style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: '2rem' }}
                     variants={container}
                 >
-                    {(activeTab === 'my-courses' ? myCourses : availableCourses).map(course => (
+                    {myCourses.map(course => (
                         <motion.div
                             key={course.id}
                             variants={item}

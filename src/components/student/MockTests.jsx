@@ -50,7 +50,7 @@ const MockTests = () => {
 
     const filteredTests = myTests.filter(t =>
         activeTab === 'available' 
-            ? (t.status === 'available' && t.questions?.length > 0) 
+            ? (t.status === 'available') 
             : t.status === 'completed'
     );
 

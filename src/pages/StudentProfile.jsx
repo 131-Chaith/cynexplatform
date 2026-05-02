@@ -55,6 +55,7 @@ const StudentProfile = () => {
                 year_of_passing: res.data.profile?.year_of_passing || '',
                 resume_link: res.data.profile?.resume_link || '',
                 skills: parsedSkills,
+                experience: res.data.profile?.experience || '',
             });
         } catch (error) {
             console.error('Failed to load profile', error);
@@ -548,40 +549,59 @@ const StudentProfile = () => {
                             <motion.button 
                                 whileHover={{ scale: 1.05, backgroundColor: '#F5F3FF' }}
                                 whileTap={{ scale: 0.95 }}
-                                onClick={() => setEditing(true)}
-                                title="Edit Skills & Experience"
+                                onClick={() => setEditing(!editing)}
+                                title="Toggle Edit Mode"
                                 style={{ 
-                                    width: '48px', height: '48px', backgroundColor: '#F5F3FF', color: '#7C3AED', 
+                                    width: '48px', height: '48px', backgroundColor: editing ? '#F5F3FF' : '#F8FAFC', 
+                                    color: editing ? '#7C3AED' : '#94A3B8', 
                                     borderRadius: '14px', display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                    border: 'none', cursor: 'pointer', transition: 'all 0.2s'
+                                    border: '1px solid #F1F5F9', cursor: 'pointer', transition: 'all 0.2s'
                                 }}
                             >
                                 <Edit3 size={22} />
                             </motion.button>
                         </div>
 
-                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '2rem' }}>
+                        <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 0.8fr', gap: '3rem' }}>
                             <div>
-                                <h4 style={{ fontSize: '0.9rem', fontWeight: '800', color: '#64748B', textTransform: 'uppercase', marginBottom: '1.25rem', letterSpacing: '0.05em' }}>Key Skills</h4>
-                                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.625rem', alignItems: 'center' }}>
+                                <h4 style={{ fontSize: '0.9rem', fontWeight: '800', color: '#64748B', textTransform: 'uppercase', marginBottom: '1.25rem', letterSpacing: '0.05em', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                    <Award size={16} /> Key Skills
+                                </h4>
+                                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.75rem', alignItems: 'center' }}>
                                     {editForm.skills && editForm.skills.length > 0 ? editForm.skills.map(skill => (
-                                        <span key={skill} style={{ 
-                                            padding: '0.5rem 1rem', backgroundColor: '#F3F4F6', 
-                                            color: '#374151', borderRadius: '2rem', fontSize: '0.875rem', 
-                                            fontWeight: '600', border: '1px solid #E5E7EB', display: 'flex', alignItems: 'center', gap: '0.4rem'
-                                        }}>
+                                        <motion.span 
+                                            key={skill} 
+                                            initial={{ scale: 0.8, opacity: 0 }}
+                                            animate={{ scale: 1, opacity: 1 }}
+                                            style={{ 
+                                                padding: '0.6rem 1.25rem', backgroundColor: 'white', 
+                                                color: '#1E293B', borderRadius: '12px', fontSize: '0.875rem', 
+                                                fontWeight: '700', border: '1px solid #E2E8F0', 
+                                                display: 'flex', alignItems: 'center', gap: '0.5rem',
+                                                boxShadow: '0 2px 4px rgba(0,0,0,0.02)'
+                                            }}
+                                        >
                                             {skill}
-                                            <X size={14} style={{ cursor: 'pointer', color: '#EF4444' }} onClick={() => handleUpdateSkills(editForm.skills.filter(s => s !== skill))} />
-                                        </span>
-                                    )) : <span style={{ fontSize: '0.875rem', color: '#9CA3AF' }}>No skills added yet</span>}
+                                            <X 
+                                                size={14} 
+                                                style={{ cursor: 'pointer', color: '#94A3B8', hover: { color: '#EF4444' } }} 
+                                                onClick={() => handleUpdateSkills(editForm.skills.filter(s => s !== skill))} 
+                                            />
+                                        </motion.span>
+                                    )) : <span style={{ fontSize: '0.875rem', color: '#94A3B8', fontStyle: 'italic' }}>No skills added to your arsenal yet.</span>}
                                     
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', background: '#F8FAFC', padding: '0.2rem', borderRadius: '2rem', border: '1px dashed #CBD5E1' }}>
+                                    <div style={{ 
+                                        display: 'flex', alignItems: 'center', gap: '0.5rem', 
+                                        background: '#F8FAFC', padding: '0.4rem 0.75rem', 
+                                        borderRadius: '12px', border: '1px dashed #CBD5E1',
+                                        transition: 'all 0.2s'
+                                    }}>
                                         <input 
                                             type="text" 
                                             value={newSkill} 
                                             onChange={(e) => setNewSkill(e.target.value)} 
-                                            placeholder="Type a skill..." 
-                                            style={{ border: 'none', background: 'transparent', outline: 'none', padding: '0.3rem 0.5rem', fontSize: '0.85rem', width: '120px' }}
+                                            placeholder="Add skill..." 
+                                            style={{ border: 'none', background: 'transparent', outline: 'none', fontSize: '0.875rem', width: '100px', fontWeight: '600' }}
                                             onKeyDown={(e) => {
                                                 if (e.key === 'Enter' && newSkill.trim() !== '') {
                                                     e.preventDefault();
@@ -599,25 +619,49 @@ const StudentProfile = () => {
                                                     setNewSkill('');
                                                 }
                                             }}
-                                            style={{ padding: '0.3rem 0.6rem', backgroundColor: '#4F46E5', color: 'white', borderRadius: '2rem', fontSize: '0.75rem', fontWeight: '700', border: 'none', cursor: 'pointer' }}
+                                            style={{ 
+                                                padding: '0.35rem 0.75rem', backgroundColor: '#4F46E5', 
+                                                color: 'white', borderRadius: '8px', fontSize: '0.75rem', 
+                                                fontWeight: '800', border: 'none', cursor: 'pointer' 
+                                            }}
                                         >
-                                            + Add
+                                            ADD
                                         </button>
                                     </div>
                                 </div>
                             </div>
+
                             <div>
-                                <h4 style={{ fontSize: '0.9rem', fontWeight: '800', color: '#64748B', textTransform: 'uppercase', marginBottom: '1.25rem', letterSpacing: '0.05em' }}>Recent Experience</h4>
-                                <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-                                    <div style={{ paddingLeft: '1rem', borderLeft: '2px solid #E5E7EB' }}>
-                                        <p style={{ fontWeight: '700', color: '#1E293B', fontSize: '0.95rem' }}>AI Developer Intern</p>
-                                        <p style={{ fontSize: '0.85rem', color: '#64748B' }}>Cynex AI Project • 2024</p>
+                                <h4 style={{ fontSize: '0.9rem', fontWeight: '800', color: '#64748B', textTransform: 'uppercase', marginBottom: '1.25rem', letterSpacing: '0.05em', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                    <FileText size={16} /> Professional Background
+                                </h4>
+                                {editing ? (
+                                    <textarea
+                                        value={editForm.experience || ''}
+                                        onChange={e => setEditForm(prev => ({ ...prev, experience: e.target.value }))}
+                                        placeholder="Describe your recent experience or projects..."
+                                        style={{ 
+                                            width: '100%', padding: '1rem', border: '1px solid #E2E8F0', 
+                                            borderRadius: '12px', outline: 'none', backgroundColor: '#F8FAFC', 
+                                            fontSize: '0.9rem', minHeight: '120px', lineHeight: '1.6', color: '#334155',
+                                            fontWeight: '500'
+                                        }}
+                                    />
+                                ) : (
+                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+                                        {profile.experience ? (
+                                            <p style={{ fontSize: '0.95rem', color: '#475569', lineHeight: '1.7', whiteSpace: 'pre-wrap', fontWeight: '500' }}>
+                                                {profile.experience}
+                                            </p>
+                                        ) : (
+                                            <div style={{ padding: '1.5rem', border: '2px dashed #F1F5F9', borderRadius: '1rem', textAlign: 'center' }}>
+                                                <p style={{ fontSize: '0.85rem', color: '#94A3B8', fontWeight: '600', margin: 0 }}>
+                                                    Experience data not synchronized. Click edit to update your professional timeline.
+                                                </p>
+                                            </div>
+                                        )}
                                     </div>
-                                    <div style={{ paddingLeft: '1rem', borderLeft: '2px solid #E5E7EB' }}>
-                                        <p style={{ fontWeight: '700', color: '#1E293B', fontSize: '0.95rem' }}>Freelance Web Dev</p>
-                                        <p style={{ fontSize: '0.85rem', color: '#64748B' }}>Self-employed • 2023</p>
-                                    </div>
-                                </div>
+                                )}
                             </div>
                         </div>
                     </Card>

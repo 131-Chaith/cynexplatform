@@ -1,4 +1,4 @@
-import express from 'express';
+import express from 'express'; // Trigger reload v4
 import cors from 'cors';
 import dotenv from 'dotenv';
 import path from 'path';
@@ -44,7 +44,9 @@ app.use((req, res, next) => {
     next();
 });
 
-app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+if (process.env.NODE_ENV !== 'production' && !process.env.VERCEL) {
+    app.use('/uploads', express.static(path.join(__dirname, '../_local_uploads_ignore')));
+}
 
 // Log DB Connection
 console.log("Database URL:", process.env.TURSO_DATABASE_URL ? "Loaded" : "Not Loaded");

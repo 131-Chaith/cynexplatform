@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import api from '../../services/api';
+import { useData } from '../../context/DataContext';
 import Card from '../Card';
 import Button from '../Button';
 import Input from '../Input';
@@ -7,8 +8,8 @@ import { Users, BookOpen, Plus, X, Search, Filter, Edit2, Trash2, Clock } from '
 import { motion, AnimatePresence } from 'framer-motion';
 
 const AdminStudents = () => {
-    const [students, setStudents] = useState([]);
-    const [courses, setCourses] = useState([]);
+    const { data, fetchData: refreshGlobalData } = useData() || {};
+    const { courses = [] } = data || {};
     const [batches, setBatches] = useState([]);
     const [loading, setLoading] = useState(true);
     const [submitting, setSubmitting] = useState(false);
@@ -34,13 +35,7 @@ const AdminStudents = () => {
 
     const fetchData = async () => {
         try {
-            const [studentsRes, coursesRes, batchesRes] = await Promise.all([
-                api.get('admin/students'),
-                api.get('courses'),
-                api.get('batches')
-            ]);
-            setStudents(studentsRes.data);
-            setCourses(coursesRes.data);
+            const batchesRes = await api.get('batches');
             setBatches(batchesRes.data);
             setLoading(false);
         } catch (error) {
@@ -72,7 +67,7 @@ const AdminStudents = () => {
                 setShowAddModal(false);
                 setEditingStudent(null);
                 setSuccess(false);
-                fetchData();
+                refreshGlobalData();
                 // Reset form
                 setFormData({
                     name: '', email: '', password: '', phone: '',
@@ -144,7 +139,7 @@ const AdminStudents = () => {
             console.log(`[TERMINATION] Initiating purge for ID: ${student.id}`);
             const res = await api.delete(`admin/students/${student.id}`);
             alert(res.data.message || "Student Terminated Successfully!");
-            fetchData(); // Reload data
+            refreshGlobalData(); // Reload data
         } catch (error) {
             console.error("Termination Error:", error);
             alert("Termination Protocol Failed: " + (error.response?.data?.message || error.message));
@@ -176,7 +171,7 @@ const AdminStudents = () => {
             {loading ? <p>Loading...</p> : (
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '1.5rem', perspective: '1500px' }}>
                     <AnimatePresence mode="popLayout">
-                        {students.map((student, i) => (
+                        {data?.students?.map((student, i) => (
                             <motion.div 
                                 key={student.id} 
                                 initial={{ opacity: 0, y: 30, scale: 0.95 }}
@@ -310,7 +305,7 @@ const AdminStudents = () => {
                             </motion.div>
                         ))}
                     </AnimatePresence>
-                    {students.length === 0 && (
+                    {(!data?.students || data.students.length === 0) && (
                         <div style={{ gridColumn: '1 / -1', padding: '6rem', textAlign: 'center', color: '#475569', border: '2px dashed rgba(255,255,255,0.05)', borderRadius: '2rem' }}>
                             <Users size={64} style={{ opacity: 0.1, marginBottom: '1.5rem' }} />
                             <p style={{ textTransform: 'uppercase', letterSpacing: '0.15em', fontWeight: '900' }}>

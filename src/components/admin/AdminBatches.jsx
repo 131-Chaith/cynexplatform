@@ -243,7 +243,7 @@ const AdminBatches = () => {
     };
 
     return (
-        <div>
+        <div style={{ padding: '2rem', background: '#0F172A', minHeight: '100vh', borderRadius: '1rem', border: '1px solid rgba(255, 255, 255, 0.05)' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
                 <div>
                     <h1 style={{ 
@@ -270,7 +270,7 @@ const AdminBatches = () => {
                     {batches.map(batch => {
                         const stats = batchStats[batch.id] || { studentCount: 0, courseCount: 0 };
                         return (
-                            <Card key={batch.id}>
+                            <Card key={batch.id} style={{ backgroundColor: '#1E293B', border: '1px solid rgba(255, 255, 255, 0.05)' }}>
                                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1rem' }}>
                                     <div style={{ padding: '0.75rem', backgroundColor: '#e0e7ff', borderRadius: '0.5rem', color: '#4f46e5' }}>
                                         <Users size={24} />
@@ -303,12 +303,12 @@ const AdminBatches = () => {
                                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
                                         <Calendar size={16} color="#38bdf8" /> 
                                         <span style={{ color: '#64748b', textTransform: 'uppercase', fontSize: '0.7rem', letterSpacing: '0.05em' }}>Activation:</span> 
-                                        {new Date(batch.start_date).toLocaleDateString()}
+                                        {batch.start_date ? new Date(batch.start_date).toLocaleDateString() : 'N/A'}
                                     </div>
                                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
                                         <Calendar size={16} color="#fb7185" /> 
                                         <span style={{ color: '#64748b', textTransform: 'uppercase', fontSize: '0.7rem', letterSpacing: '0.05em' }}>Termination:</span> 
-                                        {new Date(batch.end_date).toLocaleDateString()}
+                                        {batch.end_date ? new Date(batch.end_date).toLocaleDateString() : 'N/A'}
                                     </div>
                                 </div>
 

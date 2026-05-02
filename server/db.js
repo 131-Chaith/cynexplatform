@@ -9,7 +9,13 @@ const __dirname = path.dirname(__filename);
 // Load env from the same directory as this file
 dotenv.config({ path: path.join(__dirname, '.env') });
 
-export const db = createClient({
-    url: process.env.TURSO_DATABASE_URL || `file:${path.join(__dirname, 'local.db')}`,
-    authToken: process.env.TURSO_AUTH_TOKEN
-});
+export const db = createClient(
+    process.env.TURSO_DATABASE_URL
+        ? {
+            url: process.env.TURSO_DATABASE_URL,
+            authToken: process.env.TURSO_AUTH_TOKEN
+          }
+        : {
+            url: `file:${path.join(__dirname, 'local.db')}`
+          }
+);

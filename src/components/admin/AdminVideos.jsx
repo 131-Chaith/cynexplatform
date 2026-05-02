@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { AnimatePresence } from 'framer-motion';
 import api from '../../services/api';
+import { useData } from '../../context/DataContext';
 import Card from '../Card';
 import Button from '../Button';
 import Input from '../Input';
@@ -8,8 +9,9 @@ import { Plus, Edit2, Trash2, X, Play, Youtube } from 'lucide-react';
 import YoutubePlaylistImport from './YoutubePlaylistImport';
 
 const AdminVideos = () => {
+    const { data } = useData() || {};
+    const { courses = [] } = data || {};
     const [videos, setVideos] = useState([]);
-    const [courses, setCourses] = useState([]);
     const [allModules, setAllModules] = useState([]); // For lookup (names)
     const [filterModules, setFilterModules] = useState([]); // For filter dropdown
     const [formModules, setFormModules] = useState([]); // For form dropdown
@@ -26,12 +28,15 @@ const AdminVideos = () => {
     const [searchTerm, setSearchTerm] = useState('');
 
     // Form data
+    const [batches, setBatches] = useState([]);
+    const [filterBatchId, setFilterBatchId] = useState('');
     const [formData, setFormData] = useState({
         title: '',
         description: '',
         youtube_url: '',
         course_id: '',
         module_id: '',
+        batch_id: '',
         duration: '',
         order_index: 0
     });
@@ -40,12 +45,22 @@ const AdminVideos = () => {
     useEffect(() => {
         fetchVideos();
         fetchCoursesAndAllModules();
+        fetchBatches();
     }, []);
 
     // Fetch Videos when filters change
     useEffect(() => {
         fetchVideos();
-    }, [filterCourseId, filterModuleId]);
+    }, [filterCourseId, filterModuleId, filterBatchId]);
+
+    const fetchBatches = async () => {
+        try {
+            const res = await api.get('/batches');
+            setBatches(res.data || []);
+        } catch (error) {
+            console.error("Failed to fetch batches", error);
+        }
+    };
 
     // Fetch Filter Modules when Filter Course changes
     useEffect(() => {
@@ -80,6 +95,7 @@ const AdminVideos = () => {
             const params = new URLSearchParams();
             if (filterCourseId) params.append('course_id', filterCourseId);
             if (filterModuleId) params.append('module_id', filterModuleId);
+            if (filterBatchId) params.append('batch_id', filterBatchId);
             if (params.toString()) url += `?${params.toString()}`;
 
             const res = await api.get(url);
@@ -94,14 +110,10 @@ const AdminVideos = () => {
 
     const fetchCoursesAndAllModules = async () => {
         try {
-            const [coursesRes, modulesRes] = await Promise.all([
-                api.get('/courses'),
-                api.get('/modules')
-            ]);
-            setCourses(coursesRes.data || []);
+            const modulesRes = await api.get('/modules');
             setAllModules(modulesRes.data || []);
         } catch (error) {
-            console.error("Failed to fetch courses/modules", error);
+            console.error("Failed to fetch modules", error);
         }
     };
 
@@ -143,6 +155,7 @@ const AdminVideos = () => {
             youtube_url: video.youtube_url,
             course_id: video.course_id || '',
             module_id: video.module_id || '',
+            batch_id: video.batch_id || '',
             duration: video.duration || '',
             order_index: video.order_index || 0
         });
@@ -241,12 +254,22 @@ const AdminVideos = () => {
                     style={{ flex: '1', minWidth: '200px' }}
                 />
                 <select
+                    value={filterBatchId}
+                    onChange={(e) => setFilterBatchId(e.target.value)}
+                    style={{ padding: '0.5rem 1rem', borderRadius: '0.375rem', border: '1px solid var(--border-color)', minWidth: '150px' }}
+                >
+                    <option value="">All Batches</option>
+                    {(batches || []).map(batch => (
+                        <option key={batch.id} value={batch.id}>{batch.batch_name}</option>
+                    ))}
+                </select>
+                <select
                     value={filterCourseId}
                     onChange={(e) => { setFilterCourseId(e.target.value); setFilterModuleId(''); }}
                     style={{ padding: '0.5rem 1rem', borderRadius: '0.375rem', border: '1px solid var(--border-color)', minWidth: '150px' }}
                 >
                     <option value="">All Courses</option>
-                    {courses.map(course => (
+                    {(courses || []).map(course => (
                         <option key={course.id} value={course.id}>{course.title}</option>
                     ))}
                 </select>
@@ -254,10 +277,9 @@ const AdminVideos = () => {
                     value={filterModuleId}
                     onChange={(e) => setFilterModuleId(e.target.value)}
                     style={{ padding: '0.5rem 1rem', borderRadius: '0.375rem', border: '1px solid var(--border-color)', minWidth: '150px' }}
-                // Removed disabled attribute
                 >
                     <option value="">All Modules</option>
-                    {filterModules.map(module => (
+                    {(filterModules || []).map(module => (
                         <option key={module.id} value={module.id}>{module.title}</option>
                     ))}
                 </select>
@@ -283,7 +305,7 @@ const AdminVideos = () => {
                 </div>
             ) : (
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: '1.5rem' }}>
-                    {filteredVideos.map(video => {
+                    {(filteredVideos || []).map(video => {
                         const videoId = getYouTubeVideoId(video.youtube_url);
                         const isPlaying = playingVideoId === video.id;
 
@@ -369,12 +391,20 @@ const AdminVideos = () => {
                                 )}
 
                                 <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', fontSize: '0.875rem', color: 'var(--text-light)' }}>
-                                    {video.course_id && (
-                                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                                            <span style={{ fontWeight: '600' }}>Course:</span>
-                                            <span>{getCourseName(video.course_id)}</span>
-                                        </div>
-                                    )}
+                                    <div style={{ display: 'flex', gap: '1rem' }}>
+                                        {video.course_id && (
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                                <span style={{ fontWeight: '600' }}>Course:</span>
+                                                <span>{getCourseName(video.course_id)}</span>
+                                            </div>
+                                        )}
+                                        {video.batch_id && (
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                                <span style={{ fontWeight: '600', color: '#6366f1' }}>Batch:</span>
+                                                <span>{batches.find(b => b.id == video.batch_id)?.batch_name}</span>
+                                            </div>
+                                        )}
+                                    </div>
                                     {video.module_id && (
                                         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                                             <span style={{ fontWeight: '600' }}>Module:</span>
@@ -469,7 +499,22 @@ const AdminVideos = () => {
                                 required
                                 placeholder="https://www.youtube.com/watch?v=..."
                             />
-                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '1rem' }}>
+                                <div>
+                                    <label style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.875rem', fontWeight: '500' }}>
+                                        Batch (Optional)
+                                    </label>
+                                    <select
+                                        value={formData.batch_id}
+                                        onChange={e => setFormData({ ...formData, batch_id: e.target.value })}
+                                        style={{ width: '100%', padding: '0.5rem', borderRadius: '0.375rem', border: '1px solid var(--border-color)', fontSize: '0.875rem' }}
+                                    >
+                                        <option value="">Select Batch</option>
+                                        {batches.map(batch => (
+                                            <option key={batch.id} value={batch.id}>{batch.batch_name}</option>
+                                        ))}
+                                    </select>
+                                </div>
                                 <div>
                                     <label style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.875rem', fontWeight: '500' }}>
                                         Course (Optional)

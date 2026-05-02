@@ -7,7 +7,7 @@ const router = express.Router();
 // Get All Videos (with optional filtering)
 // Get All Videos (with optional filtering)
 router.get('/', authenticateToken, async (req, res) => {
-    const { course_id, module_id } = req.query;
+    const { course_id, module_id, batch_id } = req.query;
 
     try {
         let sql = "SELECT * FROM videos";
@@ -16,11 +16,24 @@ router.get('/', authenticateToken, async (req, res) => {
 
         // Role-based filtering for students
         if (req.user.role === 'student') {
+            const userRes = await db.execute({
+                sql: "SELECT batch_id FROM users WHERE id = ?",
+                args: [req.user.id]
+            });
+            const userBatchId = userRes.rows[0]?.batch_id;
+
+            if (userBatchId) {
+                conditions.push("(batch_id IS NULL OR batch_id = ?)");
+                args.push(userBatchId);
+            } else {
+                conditions.push("batch_id IS NULL");
+            }
+
             conditions.push(`
                 (course_id IN (SELECT course_id FROM enrollments WHERE student_id = ?)
-                OR course_id IN (SELECT course_id FROM batch_courses WHERE batch_id = (SELECT batch_id FROM users WHERE id = ?)))
+                OR course_id IN (SELECT course_id FROM batch_courses WHERE batch_id = ?))
             `);
-            args.push(req.user.id, req.user.id);
+            args.push(req.user.id, userBatchId);
         }
 
         if (course_id) {
@@ -31,6 +44,11 @@ router.get('/', authenticateToken, async (req, res) => {
         if (module_id) {
             conditions.push("module_id = ?");
             args.push(module_id);
+        }
+
+        if (batch_id) {
+            conditions.push("batch_id = ?");
+            args.push(batch_id);
         }
 
         if (conditions.length > 0) {
@@ -66,22 +84,17 @@ router.get('/:id', authenticateToken, async (req, res) => {
 
 // Create Video (Admin only)
 router.post('/', authenticateToken, authorizeRole('admin'), async (req, res) => {
-    const { title, description, youtube_url, course_id, module_id, duration, order_index } = req.body;
+    const { title, description, youtube_url, course_id, module_id, batch_id, duration, order_index } = req.body;
 
     if (!title || !youtube_url) {
         return res.status(400).json({ message: "Title and YouTube URL are required" });
     }
 
-    // Basic YouTube URL validation
-    if (!youtube_url.includes('youtube.com') && !youtube_url.includes('youtu.be')) {
-        return res.status(400).json({ message: "Invalid YouTube URL" });
-    }
-
     try {
         await db.execute({
-            sql: `INSERT INTO videos (title, description, youtube_url, course_id, module_id, duration, order_index) 
-                  VALUES (?, ?, ?, ?, ?, ?, ?)`,
-            args: [title, description || null, youtube_url, course_id || null, module_id || null, duration || null, order_index || 0]
+            sql: `INSERT INTO videos (title, description, youtube_url, course_id, module_id, batch_id, duration, order_index) 
+                  VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+            args: [title, description || null, youtube_url, course_id || null, module_id || null, batch_id || null, duration || null, order_index || 0]
         });
 
         res.status(201).json({ message: "Video created successfully" });
@@ -92,23 +105,18 @@ router.post('/', authenticateToken, authorizeRole('admin'), async (req, res) => 
 
 // Update Video (Admin only)
 router.put('/:id', authenticateToken, authorizeRole('admin'), async (req, res) => {
-    const { title, description, youtube_url, course_id, module_id, duration, order_index } = req.body;
+    const { title, description, youtube_url, course_id, module_id, batch_id, duration, order_index } = req.body;
 
     if (!title || !youtube_url) {
         return res.status(400).json({ message: "Title and YouTube URL are required" });
     }
 
-    // Basic YouTube URL validation
-    if (!youtube_url.includes('youtube.com') && !youtube_url.includes('youtu.be')) {
-        return res.status(400).json({ message: "Invalid YouTube URL" });
-    }
-
     try {
         await db.execute({
             sql: `UPDATE videos 
-                  SET title = ?, description = ?, youtube_url = ?, course_id = ?, module_id = ?, duration = ?, order_index = ?
+                  SET title = ?, description = ?, youtube_url = ?, course_id = ?, module_id = ?, batch_id = ?, duration = ?, order_index = ?
                   WHERE id = ?`,
-            args: [title, description || null, youtube_url, course_id || null, module_id || null, duration || null, order_index || 0, req.params.id]
+            args: [title, description || null, youtube_url, course_id || null, module_id || null, batch_id || null, duration || null, order_index || 0, req.params.id]
         });
 
         res.json({ message: "Video updated successfully" });

@@ -23,9 +23,10 @@ export const DataProvider = ({ children }) => {
         try {
             // always fetch courses
             const coursesRes = await api.get('courses');
+            const sortedCourses = (coursesRes.data || []).sort((a, b) => a.title.localeCompare(b.title));
 
             let newData = {
-                courses: coursesRes.data,
+                courses: sortedCourses,
                 students: [],
                 certificates: [],
                 submissions: [],
@@ -48,14 +49,21 @@ export const DataProvider = ({ children }) => {
                 } else {
                     // Admin Info
                     try {
-                        const certRequestsRes = await api.get('admin/certificates/requests');
-                        const pendingProjectsRes = await api.get('projects/pending'); 
+                        const [studentsRes, certRequestsRes, issuedCertsRes, pendingProjectsRes, videosRes] = await Promise.all([
+                            api.get('admin/students'),
+                            api.get('admin/certificates/requests'),
+                            api.get('admin/certificates-all'),
+                            api.get('projects/pending'),
+                            api.get('videos')
+                        ]);
 
                         newData = {
                             ...newData,
+                            students: studentsRes.data,
                             certificateRequests: certRequestsRes.data,
-                            // We can store pending projects in projects for admin view or a separate field
-                            projects: pendingProjectsRes.data
+                            certificates: issuedCertsRes.data,
+                            projects: pendingProjectsRes.data,
+                            videos: videosRes.data
                         };
                     } catch (err) {
                         console.error("Failed to fetch admin data", err);

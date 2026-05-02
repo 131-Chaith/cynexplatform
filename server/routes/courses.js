@@ -69,8 +69,14 @@ router.get('/', authenticateToken, async (req, res) => {
         let args = [];
 
         if (req.user.role === 'student' || req.user.email === 'student@gmail.com') {
-            sql = `SELECT c.* FROM courses c WHERE c.id IN (SELECT course_id FROM enrollments WHERE student_id = ?)`;
-            args = [req.user.id];
+            sql = `SELECT DISTINCT c.* FROM courses c 
+                   WHERE c.id IN (SELECT course_id FROM enrollments WHERE student_id = ?)
+                   OR c.id IN (
+                       SELECT bc.course_id FROM batch_courses bc
+                       JOIN users u ON bc.batch_id = u.batch_id
+                       WHERE u.id = ?
+                   )`;
+            args = [req.user.id, req.user.id];
         }
 
         const result = await db.execute({ sql, args });
@@ -436,9 +442,28 @@ router.get('/:id/details', authenticateToken, async (req, res) => {
             args: [courseId]
         });
 
+        let videoSql = "SELECT * FROM videos WHERE course_id = ?";
+        let videoArgs = [courseId];
+
+        if (req.user.role === 'student') {
+            const userRes = await db.execute({
+                sql: "SELECT batch_id FROM users WHERE id = ?",
+                args: [req.user.id]
+            });
+            const batchId = userRes.rows[0]?.batch_id;
+            
+            if (batchId) {
+                videoSql += " AND (batch_id IS NULL OR batch_id = ?)";
+                videoArgs.push(batchId);
+            } else {
+                videoSql += " AND batch_id IS NULL";
+            }
+        }
+        videoSql += " ORDER BY created_at ASC";
+
         const videosRes = await db.execute({
-            sql: "SELECT * FROM videos WHERE course_id = ? ORDER BY created_at ASC",
-            args: [courseId]
+            sql: videoSql,
+            args: videoArgs
         });
 
         const combinedClasses = [
@@ -467,9 +492,28 @@ router.get('/:id/details', authenticateToken, async (req, res) => {
                 sql: "SELECT * FROM mock_tests WHERE module_id = ?",
                 args: [mod.id]
             });
+            let modVideoSql = "SELECT * FROM videos WHERE module_id = ?";
+            let modVideoArgs = [mod.id];
+
+            if (req.user.role === 'student') {
+                const userRes = await db.execute({
+                    sql: "SELECT batch_id FROM users WHERE id = ?",
+                    args: [req.user.id]
+                });
+                const batchId = userRes.rows[0]?.batch_id;
+                
+                if (batchId) {
+                    modVideoSql += " AND (batch_id IS NULL OR batch_id = ?)";
+                    modVideoArgs.push(batchId);
+                } else {
+                    modVideoSql += " AND batch_id IS NULL";
+                }
+            }
+            modVideoSql += " ORDER BY order_index ASC";
+
             const videos = await db.execute({
-                sql: "SELECT * FROM videos WHERE module_id = ? ORDER BY order_index ASC",
-                args: [mod.id]
+                sql: modVideoSql,
+                args: modVideoArgs
             });
 
             // Parse test questions if needed

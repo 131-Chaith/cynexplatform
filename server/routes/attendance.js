@@ -151,9 +151,10 @@ router.get('/sessions/:id/count', authenticateToken, async (req, res) => {
 // Get upcoming sessions for a batch (Student)
 router.get('/sessions/upcoming', authenticateToken, async (req, res) => {
     try {
+        const studentId = req.user.id;
         const userRes = await db.execute({
             sql: "SELECT batch_id FROM users WHERE id = ?",
-            args: [req.user.id]
+            args: [studentId]
         });
         const batchId = userRes.rows[0]?.batch_id;
 
@@ -163,11 +164,16 @@ router.get('/sessions/upcoming', authenticateToken, async (req, res) => {
                   JOIN users u ON s.instructor_id = u.id
                   JOIN courses c ON s.course_id = c.id
                   LEFT JOIN batches b ON s.batch_id = b.id
-                  WHERE (s.batch_id = ? OR s.batch_id IS NULL) 
-                  AND s.status = 'ongoing' 
+                  WHERE s.status = 'ongoing' 
                   AND s.start_time > datetime('now')
+                  AND (s.batch_id = ? OR s.batch_id IS NULL)
+                  AND (
+                      (s.course_id IN (SELECT course_id FROM batch_courses WHERE batch_id = ?))
+                      OR 
+                      (s.course_id IN (SELECT course_id FROM enrollments WHERE student_id = ?))
+                  )
                   ORDER BY s.start_time ASC`,
-            args: [batchId]
+            args: [batchId, batchId, studentId]
         });
 
         res.json(sessions.rows);
@@ -179,9 +185,10 @@ router.get('/sessions/upcoming', authenticateToken, async (req, res) => {
 // Get active sessions for a batch (Student)
 router.get('/sessions/active', authenticateToken, async (req, res) => {
     try {
+        const studentId = req.user.id;
         const userRes = await db.execute({
             sql: "SELECT batch_id FROM users WHERE id = ?",
-            args: [req.user.id]
+            args: [studentId]
         });
         const batchId = userRes.rows[0]?.batch_id;
 
@@ -191,10 +198,15 @@ router.get('/sessions/active', authenticateToken, async (req, res) => {
                   JOIN users u ON s.instructor_id = u.id
                   JOIN courses c ON s.course_id = c.id
                   LEFT JOIN batches b ON s.batch_id = b.id
-                  WHERE (s.batch_id = ? OR s.batch_id IS NULL) 
-                  AND s.status = 'ongoing'
+                  WHERE s.status = 'ongoing'
+                  AND (s.batch_id = ? OR s.batch_id IS NULL)
+                  AND (
+                      (s.course_id IN (SELECT course_id FROM batch_courses WHERE batch_id = ?))
+                      OR 
+                      (s.course_id IN (SELECT course_id FROM enrollments WHERE student_id = ?))
+                  )
                   ORDER BY s.start_time DESC`,
-            args: [batchId]
+            args: [batchId, batchId, studentId]
         });
 
         console.log(`[DEBUG] Active Sessions for Student (Batch: ${batchId}):`, sessions.rows.length);
@@ -299,80 +311,69 @@ function decryptAESToken(encryptedText) {
 // Implement Student Attendance QR Scanner Module verify endpoint
 router.post('/verify', authenticateToken, async (req, res) => {
     try {
-        const { qrToken, gpsData } = req.body;
+        const { qrToken, gpsData, deviceInfo } = req.body;
         const studentId = req.user.id;
+        const ipAddress = req.ip || req.headers['x-forwarded-for'] || 'unknown';
         
         if (!qrToken) {
             return res.status(400).json({ status: 'error', message: "Token is missing" });
         }
         
-        // 1. Decrypt AES
-        let jwtToken;
-        if (qrToken.startsWith('eyJ')) { // Just JWT for demo/fallback
-            jwtToken = qrToken;
-        } else if (qrToken.startsWith('qr_')) { // Demo static token fallback
-            jwtToken = jwt.sign({ courseId: 1, tokenId: qrToken }, process.env.JWT_SECRET || 'fallback_secret', { expiresIn: '1h' });
-        } else {
-            jwtToken = decryptAESToken(qrToken);
-        }
-        
-        // 2. Validate JWT
-        const decoded = jwt.verify(jwtToken, process.env.JWT_SECRET || 'fallback_secret');
-        const courseId = decoded.courseId || 1;
-        const tokenId = decoded.tokenId || `fallback_token_${Date.now()}`;
-        
-        // 3. Mark attendance in database & Check Unique Token
-        const check = await db.execute({
-            sql: "SELECT id FROM qr_attendance_records WHERE token_id = ?",
-            args: [tokenId]
-        });
-        
-        if (check.rows.length > 0) {
-            return res.status(400).json({ status: 'error', message: "Token already used. Please request a new QR code." });
-        }
-        
-        await db.execute({
-            sql: `INSERT INTO qr_attendance_records (student_id, course_id, gps_lat, gps_long, token_id) VALUES (?, ?, ?, ?, ?)`,
-            args: [studentId, courseId, gpsData?.lat || null, gpsData?.lng || null, tokenId]
-        });
-        
-        // Sync with standard attendance_records table for Admin Reporting
         let sessionId = null;
+
+        // 1. Resolve Session ID from Token
         if (qrToken.startsWith('qr_')) {
+            // Demo/Static Mode: lookup the session by the initial token
             const sessionRes = await db.execute({
                 sql: "SELECT id FROM attendance_sessions WHERE qr_token = ?",
                 args: [qrToken]
             });
-            if (sessionRes.rows.length > 0) {
-                sessionId = sessionRes.rows[0].id;
+            if (sessionRes.rows.length === 0) {
+                throw new Error("Invalid or expired static QR token");
+            }
+            sessionId = sessionRes.rows[0].id;
+        } else {
+            // Standard Flow: Decode the rotating JWT
+            try {
+                // Try QR_SECRET first (as used by generateQRToken)
+                const decoded = validateQRToken(qrToken);
+                sessionId = decoded.sessionId;
+            } catch (err) {
+                // Fallback for legacy/other tokens if necessary
+                try {
+                    const decoded = jwt.verify(qrToken, process.env.JWT_SECRET || 'fallback_secret');
+                    sessionId = decoded.sessionId || decoded.courseId; // Adjust based on token structure
+                } catch (innerErr) {
+                    throw new Error("Invalid or expired QR code signature.");
+                }
             }
         }
-        
-        if (sessionId) {
-            const standardCheck = await db.execute({
-                sql: "SELECT id FROM attendance_records WHERE session_id = ? AND student_id = ?",
-                args: [sessionId, studentId]
-            });
-            
-            if (standardCheck.rows.length === 0) {
-                await db.execute({
-                    sql: `INSERT INTO attendance_records (session_id, student_id, join_time, status, attendance_type, remarks) 
-                          VALUES (?, ?, CURRENT_TIMESTAMP, 'present', 'offline', 'Verified via secure QR token')`,
-                    args: [sessionId, studentId]
-                });
-            }
+
+        if (!sessionId) {
+            throw new Error("Could not resolve session identity.");
         }
+
+        // 2. Mark attendance using the core service (handles GPS, Expiry, Duplicates)
+        const result = await markAttendance(sessionId, studentId, gpsData, deviceInfo, ipAddress);
         
-        res.json({ status: 'success', message: "Attendance marked successfully" });
+        // 3. Sync with qr_attendance_records for compatibility with older modules if needed
+        await db.execute({
+            sql: `INSERT OR IGNORE INTO qr_attendance_records (student_id, session_id, course_id, gps_lat, gps_long, token_id) 
+                  SELECT ?, ?, course_id, ?, ?, ? FROM attendance_sessions WHERE id = ?`,
+            args: [studentId, sessionId, gpsData?.lat || null, gpsData?.lng || null, qrToken, sessionId]
+        });
+
+        res.json({ 
+            status: 'success', 
+            message: result.message || "Attendance marked successfully",
+            data: result
+        });
     } catch (error) {
-        if (error.name === 'TokenExpiredError') {
-            return res.status(400).json({ status: 'error', message: "QR Code expired. Ask instructor to refresh." });
-        } else if (error.name === 'JsonWebTokenError') {
-            return res.status(400).json({ status: 'error', message: "Invalid QR Code signature." });
-        }
-        
-        console.error("QR Verification Error:", error);
-        res.status(400).json({ status: 'error', message: error.message || "Database error occurred" });
+        console.error("QR Verification Error:", error.message);
+        res.status(400).json({ 
+            status: 'error', 
+            message: error.message || "Database error occurred" 
+        });
     }
 });
 
@@ -448,9 +449,9 @@ router.get('/reports/export', authenticateToken, async (req, res) => {
         const { batch_id } = req.query;
         let sql = `SELECT r.*, s.topic, s.type, c.title as course_title, u.name as student_name, b.batch_name
                   FROM attendance_records r
-                  JOIN attendance_sessions s ON r.session_id = s.id
-                  JOIN courses c ON s.course_id = c.id
-                  JOIN users u ON r.student_id = u.id
+                  LEFT JOIN attendance_sessions s ON r.session_id = s.id
+                  LEFT JOIN courses c ON s.course_id = c.id
+                  LEFT JOIN users u ON r.student_id = u.id
                   LEFT JOIN batches b ON u.batch_id = b.id`;
         let args = [];
         let whereClauses = [];
@@ -502,11 +503,28 @@ router.get('/notifications', authenticateToken, async (req, res) => {
             });
         }
 
-        // Recent classes notification
-        const recent = await db.execute({
-            sql: "SELECT topic, start_time FROM attendance_sessions WHERE status = 'ongoing' LIMIT 5",
+        // Recent classes notification (Filtered by student's enrollment and batch)
+        const studentId = req.user.id;
+        const userRes = await db.execute({
+            sql: "SELECT batch_id FROM users WHERE id = ?",
+            args: [studentId]
         });
-        
+        const batchId = userRes.rows[0]?.batch_id;
+
+        const recent = await db.execute({
+            sql: `SELECT s.topic, s.start_time 
+                  FROM attendance_sessions s 
+                  WHERE s.status = 'ongoing' 
+                  AND (s.batch_id = ? OR s.batch_id IS NULL)
+                  AND (
+                      (s.course_id IN (SELECT course_id FROM batch_courses WHERE batch_id = ?))
+                      OR 
+                      (s.course_id IN (SELECT course_id FROM enrollments WHERE student_id = ?))
+                  )
+                  LIMIT 5`,
+            args: [batchId, batchId, studentId]
+        });
+
         recent.rows.forEach(session => {
             notifications.push({
                 type: 'info',
@@ -626,9 +644,9 @@ router.get('/history/my', authenticateToken, async (req, res) => {
         const { batch_id } = req.query;
         let sql = `SELECT r.*, s.topic, s.type, c.title as course_title, u.name as instructor_name, student_u.name as student_name, b.batch_name
                   FROM attendance_records r
-                  JOIN attendance_sessions s ON r.session_id = s.id
-                  JOIN courses c ON s.course_id = c.id
-                  JOIN users u ON s.instructor_id = u.id
+                  LEFT JOIN attendance_sessions s ON r.session_id = s.id
+                  LEFT JOIN courses c ON s.course_id = c.id
+                  LEFT JOIN users u ON s.instructor_id = u.id
                   JOIN users student_u ON r.student_id = student_u.id
                   LEFT JOIN batches b ON student_u.batch_id = b.id`;
         let args = [];

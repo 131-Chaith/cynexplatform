@@ -14,6 +14,7 @@ const Assignments = () => {
     const [allAssignments, setAllAssignments] = useState([]);
     const [mySubmissions, setMySubmissions] = useState([]);
     const [loading, setLoading] = useState(true);
+    const [viewingDetails, setViewingDetails] = useState(null);
 
     useEffect(() => {
         fetchAssignments();
@@ -204,8 +205,8 @@ const Assignments = () => {
                                             <span style={{
                                                 padding: '0.4rem 0.8rem',
                                                 borderRadius: '12px',
-                                                backgroundColor: '#F8FAFC',
-                                                color: '#64748B',
+                                                backgroundColor: 'rgba(16, 185, 129, 0.1)',
+                                                color: '#34D399',
                                                 fontSize: '0.75rem',
                                                 fontWeight: '800',
                                                 display: 'flex',
@@ -213,7 +214,7 @@ const Assignments = () => {
                                                 gap: '0.4rem',
                                                 textTransform: 'uppercase',
                                                 letterSpacing: '0.025em',
-                                                border: '1px solid #E2E8F0'
+                                                border: '1px solid rgba(16, 185, 129, 0.2)'
                                             }}>
                                                 <CheckCircle size={14} /> Submitted
                                             </span>
@@ -271,7 +272,7 @@ const Assignments = () => {
                                         <PlayCircle size={18} style={{ marginRight: '0.5rem' }} /> START ASSIGNMENT
                                     </Button>
                                 )}
-                                <Button variant="outline" style={{ borderRadius: '12px', fontWeight: '800', border: '1px solid #E2E8F0' }}>VIEW DETAILS</Button>
+                                <Button variant="outline" onClick={() => setViewingDetails(assignment)} style={{ borderRadius: '12px', fontWeight: '800', border: '1px solid #E2E8F0' }}>VIEW DETAILS</Button>
                             </div>
                         </div>
                     </Card>
@@ -323,6 +324,108 @@ const Assignments = () => {
                             <Button variant="primary" onClick={handleConfirmSubmit}>
                                 Submit
                             </Button>
+                        </div>
+                    </Card>
+                </div>
+            )}
+
+            {/* View Details Modal */}
+            {viewingDetails && (
+                <div style={{
+                    position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+                    backgroundColor: 'rgba(0, 0, 0, 0.8)', zIndex: 1000,
+                    display: 'flex', justifyContent: 'center', alignItems: 'center',
+                    backdropFilter: 'blur(8px)'
+                }}>
+                    <Card style={{ 
+                        width: '90%', 
+                        maxWidth: '600px', 
+                        position: 'relative', 
+                        maxHeight: '90vh', 
+                        overflowY: 'auto',
+                        background: 'linear-gradient(135deg, rgba(15, 23, 42, 0.98), rgba(30, 41, 59, 0.98))',
+                        borderRadius: '1.5rem',
+                        boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5)',
+                        border: '1px solid rgba(255, 255, 255, 0.1)'
+                    }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1.5rem', borderBottom: '1px solid rgba(255, 255, 255, 0.1)', paddingBottom: '1rem' }}>
+                            <div>
+                                <h2 style={{ fontSize: '1.5rem', fontWeight: '900', color: '#ffffff', marginBottom: '0.25rem' }}>{viewingDetails.title}</h2>
+                                <p style={{ color: '#94A3B8', fontSize: '0.875rem', fontWeight: '600' }}>{viewingDetails.course_title} {viewingDetails.module_title && `• ${viewingDetails.module_title}`}</p>
+                            </div>
+                            <button
+                                onClick={() => setViewingDetails(null)}
+                                style={{ border: 'none', background: 'none', cursor: 'pointer', color: '#94A3B8', padding: '0.5rem' }}
+                            >
+                                <X size={24} />
+                            </button>
+                        </div>
+
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+                            <div>
+                                <h4 style={{ fontSize: '0.75rem', fontWeight: '800', color: '#64748B', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.5rem' }}>Description</h4>
+                                <p style={{ color: '#CBD5E1', fontSize: '0.95rem', lineHeight: '1.6' }}>{viewingDetails.description}</p>
+                            </div>
+
+                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', background: '#0F172A', padding: '1.25rem', borderRadius: '1rem', border: '1px solid #1E293B' }}>
+                                <div>
+                                    <h4 style={{ fontSize: '0.7rem', fontWeight: '800', color: '#64748B', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.25rem' }}>Status</h4>
+                                    <span style={{ 
+                                        fontWeight: '800', 
+                                        color: viewingDetails.status === 'graded' ? '#4ADE80' : (viewingDetails.status === 'submitted' ? '#60A5FA' : '#FBBF24'),
+                                        textTransform: 'uppercase'
+                                    }}>
+                                        {viewingDetails.status}
+                                    </span>
+                                </div>
+                                <div>
+                                    <h4 style={{ fontSize: '0.7rem', fontWeight: '800', color: '#64748B', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.25rem' }}>Type</h4>
+                                    <span style={{ fontWeight: '700', color: '#F8FAFC', textTransform: 'capitalize' }}>{viewingDetails.type || 'Standard'}</span>
+                                </div>
+                                {viewingDetails.submissionDate && (
+                                    <div>
+                                        <h4 style={{ fontSize: '0.7rem', fontWeight: '800', color: '#64748B', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.25rem' }}>Submitted On</h4>
+                                        <span style={{ fontWeight: '600', color: '#F8FAFC' }}>{new Date(viewingDetails.submissionDate).toLocaleDateString()}</span>
+                                    </div>
+                                )}
+                                {viewingDetails.due_date && (
+                                    <div>
+                                        <h4 style={{ fontSize: '0.7rem', fontWeight: '800', color: '#64748B', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.25rem' }}>Due Date</h4>
+                                        <span style={{ fontWeight: '600', color: '#F8FAFC' }}>{new Date(viewingDetails.due_date).toLocaleDateString()}</span>
+                                    </div>
+                                )}
+                            </div>
+
+                            {viewingDetails.status === 'graded' && (
+                                <div style={{ background: 'rgba(22, 163, 74, 0.1)', padding: '1.25rem', borderRadius: '1rem', border: '1px solid rgba(74, 222, 128, 0.2)' }}>
+                                    <h4 style={{ fontSize: '0.75rem', fontWeight: '800', color: '#4ADE80', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.5rem' }}>Instructor Grade & Feedback</h4>
+                                    <p style={{ color: '#22C55E', fontWeight: '700', fontSize: '1.1rem' }}>{viewingDetails.grade}</p>
+                                </div>
+                            )}
+
+                            {viewingDetails.submitted_score !== undefined && viewingDetails.submitted_score !== null && (
+                                <div style={{ background: 'rgba(59, 130, 246, 0.1)', padding: '1.25rem', borderRadius: '1rem', border: '1px solid rgba(96, 165, 250, 0.2)' }}>
+                                    <h4 style={{ fontSize: '0.75rem', fontWeight: '800', color: '#60A5FA', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.5rem' }}>Automated Score</h4>
+                                    <p style={{ color: '#3B82F6', fontWeight: '800', fontSize: '1.25rem' }}>{viewingDetails.submitted_score} / 100</p>
+                                </div>
+                            )}
+
+                            {viewingDetails.submitted_code && (
+                                <div>
+                                    <h4 style={{ fontSize: '0.75rem', fontWeight: '800', color: '#64748B', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.5rem' }}>Submitted Code</h4>
+                                    <div style={{ background: '#020617', padding: '1.25rem', borderRadius: '1rem', overflowX: 'auto', border: '1px solid #1E293B' }}>
+                                        <pre style={{ margin: 0, color: '#E2E8F0', fontSize: '0.85rem', fontFamily: 'monospace' }}>
+                                            <code>{viewingDetails.submitted_code}</code>
+                                        </pre>
+                                    </div>
+                                </div>
+                            )}
+
+                            <div style={{ marginTop: '1rem' }}>
+                                <Button onClick={() => setViewingDetails(null)} style={{ width: '100%', borderRadius: '12px', fontWeight: '800', background: '#334155', color: '#ffffff', border: 'none' }}>
+                                    Close Details
+                                </Button>
+                            </div>
                         </div>
                     </Card>
                 </div>

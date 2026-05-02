@@ -68,7 +68,7 @@ router.post('/enroll', authenticateToken, async (req, res) => {
 
 // Update Student Profile (self)
 router.put('/profile', authenticateToken, async (req, res) => {
-    const { name, phone, address, dob, gender, institution, highest_qualification, year_of_passing, resume_link, skills } = req.body;
+    const { name, phone, address, dob, gender, institution, highest_qualification, year_of_passing, resume_link, skills, experience } = req.body;
     try {
         // Update name in users table
         if (name) {
@@ -87,13 +87,13 @@ router.put('/profile', authenticateToken, async (req, res) => {
         
         if (existing.rows.length > 0) {
             await db.execute({
-                sql: "UPDATE students SET phone = ?, address = ?, dob = ?, gender = ?, institution = ?, highest_qualification = ?, year_of_passing = ?, resume_link = ?, skills = ? WHERE user_id = ?",
-                args: [phone || null, address || null, dob || null, gender || 'Male', institution || null, highest_qualification || null, year_of_passing || null, resume_link || null, skillsString, req.user.id]
+                sql: "UPDATE students SET phone = ?, address = ?, dob = ?, gender = ?, institution = ?, highest_qualification = ?, year_of_passing = ?, resume_link = ?, skills = ?, experience = ? WHERE user_id = ?",
+                args: [phone || null, address || null, dob || null, gender || 'Male', institution || null, highest_qualification || null, year_of_passing || null, resume_link || null, skillsString, experience || null, req.user.id]
             });
         } else {
             await db.execute({
-                sql: "INSERT INTO students (user_id, phone, address, dob, gender, institution, highest_qualification, year_of_passing, resume_link, skills) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
-                args: [req.user.id, phone || null, address || null, dob || null, gender || 'Male', institution || null, highest_qualification || null, year_of_passing || null, resume_link || null, skillsString]
+                sql: "INSERT INTO students (user_id, phone, address, dob, gender, institution, highest_qualification, year_of_passing, resume_link, skills, experience) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                args: [req.user.id, phone || null, address || null, dob || null, gender || 'Male', institution || null, highest_qualification || null, year_of_passing || null, resume_link || null, skillsString, experience || null]
             });
         }
         res.json({ message: 'Profile updated successfully' });
@@ -325,11 +325,15 @@ router.get('/certificates', authenticateToken, async (req, res) => {
     }
 });
 
-// Helper: get enrolled course IDs for a student
+// Helper: get enrolled and batch-allotted course IDs for a student
 async function getEnrolledCourseIds(studentId) {
     const res = await db.execute({
-        sql: "SELECT course_id FROM enrollments WHERE student_id = ?",
-        args: [studentId]
+        sql: `SELECT course_id FROM enrollments WHERE student_id = ?
+              UNION
+              SELECT bc.course_id FROM batch_courses bc
+              JOIN users u ON bc.batch_id = u.batch_id
+              WHERE u.id = ?`,
+        args: [studentId, studentId]
     });
     
     return res.rows.map(r => r.course_id);
@@ -343,22 +347,15 @@ router.get('/assignments', authenticateToken, async (req, res) => {
         if (courseIds.length === 0) return res.json([]);
 
         const placeholders = courseIds.map(() => '?').join(',');
-        // Fetch course-level assignments AND module-level assignments (linked via module_id)
+        // Fetch course-level assignments AND module-level assignments
         const result = await db.execute({
-            sql: `SELECT a.*, c.title as course_title, NULL as module_title
+            sql: `SELECT a.*, c.title as course_title, m.title as module_title
                   FROM assignments a
                   JOIN courses c ON a.course_id = c.id
-                  WHERE a.course_id IN (${placeholders}) AND (a.module_id IS NULL OR a.module_id = '')
-                  UNION
-                  SELECT DISTINCT a.*, c.title as course_title, m.title as module_title
-                  FROM assignments a
-                  JOIN modules m ON a.module_id = m.id
-                  JOIN course_modules cm ON m.id = cm.module_id
-                  JOIN courses c ON cm.course_id = c.id
-                  WHERE (a.course_id IN (${placeholders}) OR cm.course_id IN (${placeholders})) 
-                  AND a.module_id IS NOT NULL AND a.module_id != ''
-                  ORDER BY due_date ASC`,
-            args: [...courseIds, ...courseIds, ...courseIds]
+                  LEFT JOIN modules m ON a.module_id = m.id
+                  WHERE a.course_id IN (${placeholders})
+                  ORDER BY a.due_date ASC`,
+            args: [...courseIds]
         });
         res.json(result.rows);
     } catch (error) {
@@ -373,22 +370,15 @@ router.get('/tests', authenticateToken, async (req, res) => {
         if (courseIds.length === 0) return res.json([]);
 
         const placeholders = courseIds.map(() => '?').join(',');
-        // Fetch course-level tests AND module-level tests (linked via module_id)
+        // Fetch course-level tests AND module-level tests
         const result = await db.execute({
-            sql: `SELECT t.*, c.title as course_title, NULL as module_title
+            sql: `SELECT t.*, c.title as course_title, m.title as module_title
                   FROM mock_tests t
                   JOIN courses c ON t.course_id = c.id
-                  WHERE t.course_id IN (${placeholders}) AND (t.module_id IS NULL OR t.module_id = '')
-                  UNION
-                  SELECT DISTINCT t.*, c.title as course_title, m.title as module_title
-                  FROM mock_tests t
-                  JOIN modules m ON t.module_id = m.id
-                  JOIN course_modules cm ON m.id = cm.module_id
-                  JOIN courses c ON cm.course_id = c.id
-                  WHERE (t.course_id IN (${placeholders}) OR cm.course_id IN (${placeholders}))
-                  AND t.module_id IS NOT NULL AND t.module_id != ''
-                  ORDER BY id ASC`,
-            args: [...courseIds, ...courseIds, ...courseIds]
+                  LEFT JOIN modules m ON t.module_id = m.id
+                  WHERE t.course_id IN (${placeholders})
+                  ORDER BY t.id ASC`,
+            args: [...courseIds]
         });
 
         // Parse questions JSON

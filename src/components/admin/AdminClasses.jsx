@@ -4,7 +4,8 @@ import api from '../../services/api';
 import Card from '../Card';
 import Button from '../Button';
 import Input from '../Input';
-import { Video, Plus, Trash2, X, PlayCircle, Calendar, AlertCircle, User, Layers, Tag } from 'lucide-react';
+import { Video, Plus, Trash2, X, PlayCircle, Calendar, AlertCircle, User, Layers, Tag, Clock } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
 
 const AdminClasses = () => {
     const { data } = useData();
@@ -28,7 +29,6 @@ const AdminClasses = () => {
         instructor_name: ''
     });
 
-    // Fetch classes and modules when course selection changes
     useEffect(() => {
         if (selectedCourseId) {
             fetchClasses();
@@ -92,7 +92,7 @@ const AdminClasses = () => {
     };
 
     const handleDelete = async (classId) => {
-        if (!window.confirm('Delete this class? Students will no longer see it.')) return;
+        if (!window.confirm('Delete this class?')) return;
         setDeleteId(classId);
         try {
             await api.delete(`/courses/${selectedCourseId}/classes/${classId}`);
@@ -115,285 +115,149 @@ const AdminClasses = () => {
     return (
         <div>
             {/* Header */}
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem', flexWrap: 'wrap', gap: '1rem' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem', flexWrap: 'wrap', gap: '1rem' }}>
                 <div>
-                    <h2 style={{ fontSize: '1.5rem', fontWeight: 'bold', color: 'var(--text)' }}>Manage Classes</h2>
-                    <p style={{ color: 'var(--text-light)', fontSize: '0.875rem', marginTop: '0.25rem' }}>
-                        Add class sessions (videos) to courses. Enrolled students will see them in their Classes page.
-                    </p>
+                    <h2 style={{ fontSize: '1.5rem', fontWeight: '800', color: 'var(--text)' }}>Session Management</h2>
+                    <p style={{ color: 'var(--text-light)', fontSize: '0.9rem' }}>Schedule and manage video classes for courses.</p>
                 </div>
-                <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center', flexWrap: 'wrap' }}>
+                <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
                     <select
                         value={selectedCourseId}
                         onChange={e => setSelectedCourseId(e.target.value)}
                         style={{
-                            padding: '0.5rem 1rem', borderRadius: '0.75rem',
-                            border: selectedCourseId ? '2px solid var(--primary)' : '2px solid #E2E8F0',
-                            fontSize: '0.875rem', fontWeight: '600',
-                            color: selectedCourseId ? 'var(--primary)' : '#94A3B8',
-                            backgroundColor: 'white', cursor: 'pointer', outline: 'none',
-                            minWidth: '200px', transition: 'all 0.2s'
+                            padding: '0.75rem', borderRadius: '12px',
+                            border: '1px solid var(--border-color)',
+                            fontSize: '0.85rem', fontWeight: '700',
+                            color: 'var(--text)', backgroundColor: 'white',
+                            minWidth: '220px'
                         }}
                     >
-                        <option value="">⬇ Select a Course First</option>
+                        <option value="">-- Select Course --</option>
                         {courses.map(c => <option key={c.id} value={c.id}>{c.title}</option>)}
                     </select>
                     <Button
                         onClick={() => { setError(''); setIsModalOpen(true); }}
                         disabled={!selectedCourseId}
-                        title={!selectedCourseId ? 'Please select a course first' : 'Add a new class session'}
+                        style={{ borderRadius: '12px' }}
                     >
-                        <Plus size={16} style={{ marginRight: '0.4rem' }} /> Add Class Session
+                        <Plus size={18} style={{ marginRight: '0.5rem' }} /> New Session
                     </Button>
                 </div>
             </div>
 
             {/* Alerts */}
-            {error && (
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.75rem 1rem', backgroundColor: '#FEE2E2', color: '#DC2626', borderRadius: '0.5rem', marginBottom: '1rem' }}>
-                    <AlertCircle size={16} /> {error}
-                </div>
-            )}
-            {success && (
-                <div style={{ padding: '0.75rem 1rem', backgroundColor: '#DCFCE7', color: '#16A34A', borderRadius: '0.5rem', marginBottom: '1rem', fontWeight: '500' }}>
-                    ✅ {success}
-                </div>
-            )}
+            <AnimatePresence>
+                {error && (
+                    <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} style={{ padding: '0.75rem 1rem', backgroundColor: '#FEF2F2', color: 'var(--danger)', borderRadius: '10px', marginBottom: '1.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.9rem', fontWeight: '600' }}>
+                        <AlertCircle size={16} /> {error}
+                    </motion.div>
+                )}
+                {success && (
+                    <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} style={{ padding: '0.75rem 1rem', backgroundColor: '#DCFCE7', color: '#16A34A', borderRadius: '10px', marginBottom: '1.5rem', fontWeight: '600', fontSize: '0.9rem' }}>
+                        ✅ {success}
+                    </motion.div>
+                )}
+            </AnimatePresence>
 
             {/* Content Area */}
             {!selectedCourseId ? (
-                <div style={{ textAlign: 'center', padding: '4rem 2rem', backgroundColor: 'white', borderRadius: '1rem', border: '1px solid var(--border-color)' }}>
-                    <Video size={48} color="var(--gray)" style={{ marginBottom: '1rem', opacity: 0.4 }} />
-                    <h3 style={{ color: 'var(--text)', marginBottom: '0.5rem' }}>Select a Course</h3>
-                    <p style={{ color: 'var(--text-light)', fontSize: '0.875rem' }}>Choose a course from the dropdown above to view and manage its classes.</p>
+                <div style={{ textAlign: 'center', padding: '5rem 2rem', backgroundColor: 'white', borderRadius: '1.5rem', border: '1px dashed var(--border-color)' }}>
+                    <Video size={48} color="var(--text-light)" style={{ marginBottom: '1.5rem', opacity: 0.3 }} />
+                    <h3 style={{ color: 'var(--text)', marginBottom: '0.5rem', fontWeight: '800' }}>No Course Selected</h3>
+                    <p style={{ color: 'var(--text-light)', fontSize: '0.9rem' }}>Choose a course from the dropdown to manage its sessions.</p>
                 </div>
             ) : loadingClasses ? (
-                <div style={{ textAlign: 'center', padding: '3rem', color: 'var(--text-light)' }}>Loading classes...</div>
+                <div style={{ textAlign: 'center', padding: '4rem', color: 'var(--text-light)' }}>Loading sessions...</div>
             ) : (
-                <>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '1.25rem' }}>
-                        <h3 style={{ fontSize: '1.125rem', fontWeight: 'bold', color: 'var(--text)' }}>
-                            {courses.find(c => String(c.id) === String(selectedCourseId))?.title}
-                        </h3>
-                        <span style={{
-                            padding: '0.2rem 0.7rem', backgroundColor: 'var(--primary-light)',
-                            color: 'var(--primary)', borderRadius: '9999px', fontSize: '0.75rem', fontWeight: '600'
-                        }}>
-                            {classes.length} classes
-                        </span>
-                    </div>
-
-                    {classes.length === 0 ? (
-                        <div style={{ textAlign: 'center', padding: '3rem 2rem', backgroundColor: 'white', borderRadius: '0.75rem', border: '1px dashed var(--border-color)' }}>
-                            <PlayCircle size={40} color="var(--gray)" style={{ marginBottom: '1rem', opacity: 0.4 }} />
-                            <p style={{ color: 'var(--text-light)' }}>No classes added yet. Click "Add Class" to get started.</p>
-                        </div>
-                    ) : (
-                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(350px, 1fr))', gap: '1.25rem' }}>
-                            {classes.map(cls => (
-                                <Card key={cls.id} style={{ padding: 0, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
-                                    <div style={{ position: 'relative', height: '180px', backgroundColor: '#111', overflow: 'hidden' }}>
-                                        {getYoutubeId(cls.video_url) ? (
-                                            <img
-                                                src={`https://img.youtube.com/vi/${getYoutubeId(cls.video_url)}/hqdefault.jpg`}
-                                                alt={cls.title}
-                                                style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                                            />
-                                        ) : (
-                                            <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: '#e0e7ff' }}>
-                                                <PlayCircle size={40} color="#4F46E5" />
-                                            </div>
-                                        )}
-                                        <button
-                                            onClick={() => handleDelete(cls.id)}
-                                            disabled={deleteId === cls.id}
-                                            style={{
-                                                position: 'absolute', top: '0.5rem', right: '0.5rem',
-                                                backgroundColor: 'rgba(239,68,68,0.9)', color: 'white',
-                                                border: 'none', borderRadius: '0.375rem', cursor: 'pointer',
-                                                padding: '0.4rem', display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                                zIndex: 2
-                                            }}
-                                            title="Delete this class"
-                                        >
-                                            <Trash2 size={14} />
-                                        </button>
-                                        <div style={{ position: 'absolute', bottom: '0.5rem', left: '0.5rem', backgroundColor: 'rgba(0,0,0,0.6)', color: 'white', padding: '0.2rem 0.5rem', borderRadius: '0.25rem', fontSize: '0.7rem', fontWeight: '600' }}>
-                                            {cls.instructor_name || 'No Instructor'}
-                                        </div>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: '1.5rem' }}>
+                    {classes.map(cls => (
+                        <Card key={cls.id} style={{ padding: 0, overflow: 'hidden', border: '1px solid var(--border-color)', boxShadow: 'var(--shadow-sm)' }}>
+                            <div style={{ position: 'relative', height: '170px', backgroundColor: '#0F172A' }}>
+                                {getYoutubeId(cls.video_url) ? (
+                                    <img
+                                        src={`https://img.youtube.com/vi/${getYoutubeId(cls.video_url)}/hqdefault.jpg`}
+                                        alt={cls.title}
+                                        style={{ width: '100%', height: '100%', objectFit: 'cover', opacity: 0.8 }}
+                                    />
+                                ) : (
+                                    <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                        <PlayCircle size={40} color="white" />
                                     </div>
-                                    <div style={{ padding: '1.25rem', flex: 1 }}>
-                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '0.5rem' }}>
-                                            <h4 style={{ fontWeight: '700', color: 'var(--text)', fontSize: '1rem', lineHeight: '1.4' }}>{cls.title}</h4>
+                                )}
+                                <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(transparent, rgba(0,0,0,0.6))' }} />
+                                <button
+                                    onClick={() => handleDelete(cls.id)}
+                                    style={{ position: 'absolute', top: '0.75rem', right: '0.75rem', backgroundColor: 'rgba(239, 68, 68, 0.9)', color: 'white', border: 'none', borderRadius: '8px', padding: '0.4rem', cursor: 'pointer', zIndex: 10 }}
+                                >
+                                    <Trash2 size={14} />
+                                </button>
+                                <div style={{ position: 'absolute', bottom: '1rem', left: '1rem', color: 'white', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                                    <User size={12} />
+                                    <span style={{ fontSize: '0.75rem', fontWeight: '700' }}>{cls.instructor_name || 'Administrator'}</span>
+                                </div>
+                            </div>
+                            <div style={{ padding: '1.25rem' }}>
+                                <h4 style={{ fontWeight: '800', color: 'var(--text)', fontSize: '1rem', marginBottom: '0.5rem' }}>{cls.title}</h4>
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', marginBottom: '1rem' }}>
+                                    {cls.topic && (
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.75rem', color: 'var(--text-light)' }}>
+                                            <Tag size={12} /> <span>{cls.topic}</span>
                                         </div>
-                                        
-                                        <div style={{ backgroundColor: 'var(--bg-light)', padding: '0.75rem', borderRadius: '0.5rem', marginBottom: '1rem' }}>
-                                            {cls.topic && (
-                                                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.75rem', color: 'var(--text)', marginBottom: '0.4rem' }}>
-                                                    <Tag size={12} color="var(--primary)" />
-                                                    <span style={{ fontWeight: '600' }}>Topic:</span> {cls.topic}
-                                                </div>
-                                            )}
-                                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.75rem', color: 'var(--text-light)' }}>
-                                                <Calendar size={12} />
-                                                <span>{cls.schedule ? new Date(cls.schedule).toLocaleString() : 'No schedule set'}</span>
-                                            </div>
-                                        </div>
-
-                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                            {cls.video_url && (
-                                                <a
-                                                    href={cls.video_url} target="_blank" rel="noopener noreferrer"
-                                                    style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.8rem', color: 'var(--primary)', textDecoration: 'none', fontWeight: '600' }}
-                                                >
-                                                    <PlayCircle size={14} /> View Class
-                                                </a>
-                                            )}
-                                        </div>
+                                    )}
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.75rem', color: 'var(--text-light)' }}>
+                                        <Calendar size={12} /> <span>{new Date(cls.schedule).toLocaleString()}</span>
                                     </div>
-                                </Card>
-                            ))}
+                                </div>
+                                <a href={cls.video_url} target="_blank" rel="noreferrer" style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', color: 'var(--primary)', textDecoration: 'none', fontSize: '0.8rem', fontWeight: '800' }}>
+                                    <PlayCircle size={14} /> Play Video
+                                </a>
+                            </div>
+                        </Card>
+                    ))}
+                    {classes.length === 0 && (
+                        <div style={{ gridColumn: '1/-1', textAlign: 'center', padding: '4rem', background: 'var(--light)', borderRadius: '1.25rem', border: '1px dashed var(--border-color)' }}>
+                            <p style={{ color: 'var(--text-light)', fontWeight: '600' }}>No sessions scheduled for this course yet.</p>
                         </div>
                     )}
-                </>
+                </div>
             )}
 
-            {/* Add Class Modal */}
-            {isModalOpen && (
-                <div style={{
-                    position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
-                    backgroundColor: 'rgba(0,0,0,0.55)', display: 'flex',
-                    alignItems: 'center', justifyContent: 'center', zIndex: 1000,
-                    backdropFilter: 'blur(4px)'
-                }}>
-                    <Card style={{ 
-                        width: '100%', 
-                        maxWidth: '700px', 
-                        margin: '1rem', 
-                        position: 'relative', 
-                        maxHeight: '92vh', 
-                        overflowY: 'auto',
-                        backgroundColor: 'white',
-                        borderRadius: '2.5rem',
-                        padding: '3rem'
-                    }}>
-                        <button 
-                            onClick={() => setIsModalOpen(false)} 
-                            style={{ 
-                                position: 'absolute', 
-                                top: '2rem', 
-                                right: '2rem', 
-                                border: 'none', 
-                                background: '#F1F5F9',
-                                width: '48px',
-                                height: '48px',
-                                borderRadius: '50%',
-                                cursor: 'pointer', 
-                                color: '#475569',
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                zIndex: 10,
-                                transition: 'all 0.2s'
-                            }}
-                            onMouseOver={e => e.currentTarget.style.background = '#E2E8F0'}
-                            onMouseOut={e => e.currentTarget.style.background = '#F1F5F9'}
-                        >
-                            <X size={24} />
-                        </button>
-                        <h3 style={{ fontSize: '2rem', fontWeight: '900', marginBottom: '0.75rem', color: '#0F172A', letterSpacing: '-0.03em' }}>Add New Class</h3>
-                        <p style={{ color: '#64748B', fontSize: '1rem', marginBottom: '2.5rem', fontWeight: '500' }}>
-                            Fill in the details below to schedule a new curriculum session.
-                        </p>
-                        
-                        <form onSubmit={handleSubmit}>
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
-                                <div style={{ width: '100%' }}>
-                                    <label style={{ display: 'block', fontWeight: '800', fontSize: '0.9rem', marginBottom: '0.6rem', color: '#475569', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Class Title *</label>
-                                    <input
-                                        name="title" value={formData.title} onChange={handleChange} required
-                                        placeholder="e.g. Advanced React Hooks & Patterns"
-                                        style={{ width: '100%', padding: '1.1rem 1.25rem', border: '1px solid #E2E8F0', borderRadius: '14px', fontSize: '1.05rem', outline: 'none', boxSizing: 'border-box', background: '#F8FAFC' }}
-                                    />
-                                </div>
-                                
-                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '2rem' }}>
+            {/* Add Session Modal */}
+            <AnimatePresence>
+                {isModalOpen && (
+                    <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(15, 23, 42, 0.4)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: '1rem' }}>
+                        <motion.div initial={{ scale: 0.95, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.95, opacity: 0 }} style={{ background: 'white', borderRadius: '1.5rem', width: '100%', maxWidth: '580px', padding: '2rem', boxShadow: 'var(--shadow-lg)', position: 'relative' }}>
+                            <button onClick={() => setIsModalOpen(false)} style={{ position: 'absolute', top: '1.25rem', right: '1.25rem', background: 'var(--light)', border: 'none', borderRadius: '50%', padding: '0.5rem', cursor: 'pointer' }}>
+                                <X size={20} color="var(--text-light)" />
+                            </button>
+                            <h3 style={{ fontSize: '1.5rem', fontWeight: '800', color: 'var(--text)', marginBottom: '1.5rem' }}>Schedule New Session</h3>
+                            <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+                                <Input label="Session Title *" name="title" value={formData.title} onChange={handleChange} required placeholder="e.g. Introduction to React" />
+                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
                                     <div>
-                                        <label style={{ display: 'block', fontWeight: '800', fontSize: '0.9rem', marginBottom: '0.6rem', color: '#475569', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Module</label>
-                                        <select
-                                            name="module_id" value={formData.module_id} onChange={handleChange}
-                                            style={{ width: '100%', padding: '1.1rem 1.25rem', border: '1px solid #E2E8F0', borderRadius: '14px', fontSize: '1rem', outline: 'none', boxSizing: 'border-box', backgroundColor: '#F8FAFC', cursor: 'pointer' }}
-                                        >
-                                            <option value="">Select Module (Optional)</option>
+                                        <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: '800', color: 'var(--text-light)', marginBottom: '0.4rem', textTransform: 'uppercase' }}>Module</label>
+                                        <select name="module_id" value={formData.module_id} onChange={handleChange} style={{ width: '100%', padding: '0.75rem', borderRadius: '10px', border: '1px solid var(--border-color)', background: 'var(--light)' }}>
+                                            <option value="">None</option>
                                             {modules.map(m => <option key={m.id} value={m.id}>{m.title}</option>)}
                                         </select>
                                     </div>
-                                    
-                                    <div>
-                                        <label style={{ display: 'block', fontWeight: '800', fontSize: '0.9rem', marginBottom: '0.6rem', color: '#475569', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Topic</label>
-                                        <input
-                                            name="topic" value={formData.topic} onChange={handleChange}
-                                            placeholder="e.g. Custom Hooks"
-                                            style={{ width: '100%', padding: '1.1rem 1.25rem', border: '1px solid #E2E8F0', borderRadius: '14px', fontSize: '1rem', outline: 'none', boxSizing: 'border-box', background: '#F8FAFC' }}
-                                        />
-                                    </div>
+                                    <Input label="Topic" name="topic" value={formData.topic} onChange={handleChange} placeholder="Specific focus" />
                                 </div>
-
-                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '2rem' }}>
-                                    <div>
-                                        <label style={{ display: 'block', fontWeight: '800', fontSize: '0.9rem', marginBottom: '0.6rem', color: '#475569', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Instructor Name</label>
-                                        <input
-                                            name="instructor_name" value={formData.instructor_name} onChange={handleChange}
-                                            placeholder="e.g. Sharath"
-                                            style={{ width: '100%', padding: '1.1rem 1.25rem', border: '1px solid #E2E8F0', borderRadius: '14px', fontSize: '1rem', outline: 'none', boxSizing: 'border-box', background: '#F8FAFC' }}
-                                        />
-                                    </div>
-
-                                    <div>
-                                        <label style={{ display: 'block', fontWeight: '800', fontSize: '0.9rem', marginBottom: '0.6rem', color: '#475569', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Schedule *</label>
-                                        <input
-                                            name="schedule" type="datetime-local" value={formData.schedule} onChange={handleChange} required
-                                            style={{ width: '100%', padding: '1.1rem 1.25rem', border: '1px solid #E2E8F0', borderRadius: '14px', fontSize: '1rem', outline: 'none', boxSizing: 'border-box', background: '#F8FAFC' }}
-                                        />
-                                    </div>
+                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                                    <Input label="Instructor" name="instructor_name" value={formData.instructor_name} onChange={handleChange} placeholder="Name" />
+                                    <Input label="Schedule *" name="schedule" type="datetime-local" value={formData.schedule} onChange={handleChange} required />
                                 </div>
-
-                                <div style={{ width: '100%' }}>
-                                    <label style={{ display: 'block', fontWeight: '800', fontSize: '0.9rem', marginBottom: '0.6rem', color: '#475569', textTransform: 'uppercase', letterSpacing: '0.05em' }}>YouTube Video URL *</label>
-                                    <input
-                                        name="video_url" value={formData.video_url} onChange={handleChange} required
-                                        placeholder="https://www.youtube.com/watch?v=..."
-                                        style={{ width: '100%', padding: '1.1rem 1.25rem', border: '1px solid #E2E8F0', borderRadius: '14px', fontSize: '1rem', outline: 'none', boxSizing: 'border-box', background: '#F8FAFC' }}
-                                    />
-                                    {formData.video_url && getYoutubeId(formData.video_url) && (
-                                        <div style={{ marginTop: '1.5rem', borderRadius: '20px', overflow: 'hidden', border: '4px solid #F1F5F9', boxShadow: '0 10px 15px -3px rgba(0,0,0,0.1)' }}>
-                                            <img
-                                                src={`https://img.youtube.com/vi/${getYoutubeId(formData.video_url)}/mqdefault.jpg`}
-                                                alt="Preview"
-                                                style={{ width: '100%', maxHeight: '200px', objectFit: 'cover' }}
-                                            />
-                                        </div>
-                                    )}
+                                <Input label="YouTube URL *" name="video_url" value={formData.video_url} onChange={handleChange} required placeholder="https://..." />
+                                
+                                <div style={{ display: 'flex', gap: '1rem', marginTop: '1rem', justifyContent: 'flex-end' }}>
+                                    <Button variant="outline" type="button" onClick={() => setIsModalOpen(false)}>Cancel</Button>
+                                    <Button type="submit" isLoading={submitting} style={{ borderRadius: '10px' }}>Schedule Session</Button>
                                 </div>
-                            </div>
-
-                            <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'flex-end', marginTop: '2.5rem', paddingTop: '1.5rem', borderTop: '1px solid #E2E8F0' }}>
-                                <button type="button" onClick={() => setIsModalOpen(false)} style={{ padding: '0.8rem 1.5rem', border: '1px solid #E2E8F0', borderRadius: '12px', background: 'white', cursor: 'pointer', fontWeight: '700', fontSize: '0.95rem', color: '#64748B' }}>
-                                    Cancel
-                                </button>
-                                <button type="submit" disabled={submitting} style={{
-                                    padding: '0.625rem 1.75rem', backgroundColor: 'var(--primary)', color: 'white',
-                                    border: 'none', borderRadius: '0.5rem', cursor: submitting ? 'not-allowed' : 'pointer',
-                                    fontWeight: '700', fontSize: '0.875rem', opacity: submitting ? 0.7 : 1,
-                                    boxShadow: '0 4px 6px -1px rgba(79, 70, 229, 0.2)'
-                                }}>
-                                    {submitting ? 'Adding...' : 'Add Class Session'}
-                                </button>
-                            </div>
-                        </form>
-                    </Card>
-                </div>
-            )}
+                            </form>
+                        </motion.div>
+                    </div>
+                )}
+            </AnimatePresence>
         </div>
     );
 };

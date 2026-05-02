@@ -55,7 +55,10 @@ const courses = [
 
 const seedCourses = async () => {
     try {
-        console.log("Synchronizing course catalog with standard titles...");
+        console.log("Synchronizing course catalog with image specifications...");
+        
+        // Optional: Remove courses NOT in this list if you want strict enforcement
+        // await db.execute("DELETE FROM courses WHERE title NOT IN (...)");
         
         for (const course of courses) {
             const existing = await db.execute({
@@ -74,7 +77,20 @@ const seedCourses = async () => {
                     sql: "UPDATE courses SET title = ?, description = ?, duration = ? WHERE id = ?",
                     args: [course.title, course.description, course.duration, existing.rows[0].id]
                 });
-                console.log(`~ Updated & Formatted: ${course.title}`);
+                console.log(`~ Verified: ${course.title}`);
+            }
+        }
+
+        // Clean up excluded courses (Cyber Security, Ethical Hacking, and my previous additions)
+        const titlesToKeep = courses.map(c => c.title.toLowerCase());
+        const existingCourses = await db.execute("SELECT id, title FROM courses");
+        for (const row of existingCourses.rows) {
+            if (!titlesToKeep.includes(row.title.toLowerCase())) {
+                await db.execute({
+                    sql: "DELETE FROM courses WHERE id = ?",
+                    args: [row.id]
+                });
+                console.log(`- Removed: ${row.title}`);
             }
         }
 

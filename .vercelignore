@@ -1,0 +1,40 @@
+# Vercel Ignore File
+# Exclude folders and files that shouldn't be included in the serverless function bundle
+
+# Local dependencies and build artifacts
+node_modules
+server/node_modules
+dist
+.git
+.vscode
+.gemini
+
+# Uploads and temporary files
+_local_uploads_ignore
+server/uploads
+tmp
+scratch
+
+# Local database files
+server/local.db
+local.db
+
+# Documentation and tests
+README.md
+server/README.md
+docs
+tests
+*.test.js
+
+# One-off scripts and debug tools (reducing server/ bundle size)
+server/*.js
+!server/db.js
+!server/app_factory.js
+!server/index.js
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+server/logs.json

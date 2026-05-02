@@ -3,7 +3,7 @@ import api from '../../services/api';
 import Card from '../Card';
 import Button from '../Button';
 import Input from '../Input';
-import { Megaphone, Send, Edit2, Trash2, Calendar, Users, User, Bell, Clock, Trash, X } from 'lucide-react';
+import { Megaphone, Send, Edit2, Trash2, Calendar, Users, User, Bell, Clock, Trash, X, Plus } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 const AdminAnnouncements = () => {
@@ -101,76 +101,74 @@ const AdminAnnouncements = () => {
     };
 
     return (
-        <div style={{ padding: '1rem' }}>
+        <div>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
                 <div>
-                    <h1 style={{ fontSize: '1.875rem', fontWeight: 'bold', color: '#1e293b', marginBottom: '0.5rem' }}>
-                        Announcements & Broadcasts
-                    </h1>
-                    <p style={{ color: '#64748b' }}>Manage system-wide notifications and scheduled broadcasts.</p>
+                    <h2 style={{ fontSize: '1.5rem', fontWeight: '800', color: 'var(--text)' }}>
+                        Broadcasts & Announcements
+                    </h2>
+                    <p style={{ color: 'var(--text-light)', fontSize: '0.9rem' }}>Send notifications to students or specific batches.</p>
                 </div>
-                <Button onClick={() => { resetForm(); setEditingId(null); setShowModal(true); }}>
-                    <Megaphone size={18} style={{ marginRight: '0.5rem' }} /> Create Announcement
+                <Button onClick={() => { resetForm(); setEditingId(null); setShowModal(true); }} style={{ borderRadius: '12px' }}>
+                    <Plus size={18} style={{ marginRight: '0.5rem' }} /> Create Announcement
                 </Button>
             </div>
 
-            {loading ? <div style={{ textAlign: 'center', padding: '4rem' }}>Loading Announcements...</div> : (
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: '2rem' }}>
+            {loading ? <div style={{ textAlign: 'center', padding: '4rem', color: 'var(--text-light)' }}>Loading Announcements...</div> : (
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(340px, 1fr))', gap: '1.5rem' }}>
                     <AnimatePresence>
                         {announcements.map((ann) => (
                             <motion.div 
                                 key={ann.id}
                                 layout
-                                initial={{ opacity: 0, scale: 0.9 }}
-                                animate={{ opacity: 1, scale: 1 }}
-                                exit={{ opacity: 0, scale: 0.9 }}
+                                initial={{ opacity: 0, y: 10 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                exit={{ opacity: 0, scale: 0.95 }}
                             >
-                                <Card style={{ height: '100%', display: 'flex', flexDirection: 'column', border: '1px solid #e2e8f0', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.05)' }}>
+                                <Card style={{ height: '100%', display: 'flex', flexDirection: 'column', border: '1px solid var(--border-color)', boxShadow: 'var(--shadow-sm)' }}>
                                     <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '1rem' }}>
                                         <div style={{ 
-                                            padding: '0.25rem 0.75rem', 
-                                            borderRadius: '9999px', 
-                                            fontSize: '0.75rem', 
-                                            fontWeight: '600',
-                                            background: ann.status === 'published' ? '#ecfdf5' : '#fef3c7',
-                                            color: ann.status === 'published' ? '#059669' : '#d97706',
+                                            padding: '0.25rem 0.6rem', 
+                                            borderRadius: '6px', 
+                                            fontSize: '0.65rem', 
+                                            fontWeight: '800',
+                                            background: ann.status === 'published' ? '#DCFCE7' : '#FEF3C7',
+                                            color: ann.status === 'published' ? '#16A34A' : '#D97706',
                                             textTransform: 'uppercase'
                                         }}>
                                             {ann.status}
                                         </div>
-                                        <div style={{ color: '#94a3b8', fontSize: '0.75rem', display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+                                        <div style={{ color: 'var(--text-light)', fontSize: '0.75rem', display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
                                             <Calendar size={12} /> {new Date(ann.publish_at).toLocaleDateString()}
                                         </div>
                                     </div>
 
-                                    <h3 style={{ fontSize: '1.125rem', fontWeight: '700', color: '#1e293b', marginBottom: '0.75rem' }}>{ann.title}</h3>
+                                    <h3 style={{ fontSize: '1.1rem', fontWeight: '750', color: 'var(--text)', marginBottom: '0.75rem' }}>{ann.title}</h3>
                                     <p style={{ 
-                                        color: '#64748b', 
-                                        fontSize: '0.9rem', 
+                                        color: 'var(--text-light)', 
+                                        fontSize: '0.875rem', 
                                         flex: 1, 
                                         marginBottom: '1.5rem', 
-                                        lineHeight: '1.7',
-                                        maxHeight: '200px',
-                                        overflowY: 'auto',
-                                        paddingRight: '0.5rem',
-                                        scrollbarWidth: 'thin'
+                                        lineHeight: '1.6',
+                                        maxHeight: '120px',
+                                        overflowY: 'auto'
                                     }}>
                                         {ann.message}
                                     </p>
 
-                                    <div style={{ borderTop: '1px solid #f1f5f9', paddingTop: '1rem', marginTop: 'auto' }}>
+                                    <div style={{ borderTop: '1px solid var(--border-color)', paddingTop: '1rem', marginTop: 'auto' }}>
                                         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: '#64748b', fontSize: '0.75rem' }}>
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: 'var(--text-light)', fontSize: '0.75rem' }}>
                                                 {ann.target_type === 'all' && <><Users size={14} /> All Students</>}
                                                 {ann.target_type === 'batch' && <><Users size={14} /> Batch: {batches.find(b => b.id == ann.target_id)?.batch_name || 'Unknown'}</>}
                                                 {ann.target_type === 'individual' && <><User size={14} /> {students.find(s => s.id == ann.target_id)?.name || 'Direct'}</>}
                                             </div>
                                             <div style={{ display: 'flex', gap: '0.5rem' }}>
-                                                <button onClick={() => handleEdit(ann)} style={{ padding: '0.5rem', borderRadius: '0.5rem', border: 'none', background: '#f8fafc', color: '#64748b', cursor: 'pointer' }} title="Edit">
-                                                    <Edit2 size={16} />
+                                                <button onClick={() => handleEdit(ann)} style={{ padding: '0.5rem', borderRadius: '0.5rem', border: 'none', background: 'var(--light)', color: 'var(--text-light)', cursor: 'pointer' }}>
+                                                    <Edit2 size={14} />
                                                 </button>
-                                                <button onClick={() => handleDelete(ann.id)} style={{ padding: '0.5rem', borderRadius: '0.5rem', border: 'none', background: '#fef2f2', color: '#ef4444', cursor: 'pointer' }} title="Delete">
-                                                    <Trash2 size={16} />
+                                                <button onClick={() => handleDelete(ann.id)} style={{ padding: '0.5rem', borderRadius: '0.5rem', border: 'none', background: '#FEF2F2', color: 'var(--danger)', cursor: 'pointer' }}>
+                                                    <Trash2 size={14} />
                                                 </button>
                                             </div>
                                         </div>
@@ -185,42 +183,42 @@ const AdminAnnouncements = () => {
             {/* Post/Edit Modal */}
             <AnimatePresence>
                 {showModal && (
-                    <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: '1rem' }}>
+                    <div style={{ position: 'fixed', inset: 0, background: 'rgba(15, 23, 42, 0.4)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: '1rem' }}>
                         <motion.div 
-                            initial={{ scale: 0.9, opacity: 0 }}
+                            initial={{ scale: 0.95, opacity: 0 }}
                             animate={{ scale: 1, opacity: 1 }}
-                            exit={{ scale: 0.9, opacity: 0 }}
-                            style={{ background: 'white', borderRadius: '1.5rem', width: '100%', maxWidth: '600px', padding: '2rem', boxShadow: '0 25px 50px -12px rgba(0,0,0,0.25)', maxHeight: '90vh', overflowY: 'auto' }}
+                            exit={{ scale: 0.95, opacity: 0 }}
+                            style={{ background: 'white', borderRadius: '1.25rem', width: '100%', maxWidth: '540px', padding: '2rem', boxShadow: 'var(--shadow-lg)', maxHeight: '90vh', overflowY: 'auto' }}
                         >
                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
-                                <h2 style={{ fontSize: '1.5rem', fontWeight: '800', color: '#1e293b', margin: 0 }}>
-                                    {editingId ? 'Edit Announcement' : 'Post New Broadcast'}
+                                <h2 style={{ fontSize: '1.25rem', fontWeight: '800', color: 'var(--text)', margin: 0 }}>
+                                    {editingId ? 'Edit Announcement' : 'New Broadcast'}
                                 </h2>
-                                <button type="button" onClick={() => setShowModal(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#64748b' }}>
-                                    <X size={24} />
+                                <button type="button" onClick={() => setShowModal(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-light)' }}>
+                                    <X size={20} />
                                 </button>
                             </div>
                             <form onSubmit={handleSubmit}>
-                                <Input label="Announcement Title" value={formData.title} onChange={(e) => setFormData({...formData, title: e.target.value})} required placeholder="e.g., Campus Holiday Notice" />
-                                <div style={{ marginBottom: '1.5rem' }}>
-                                    <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '600', color: '#475569', marginBottom: '0.5rem' }}>Message Content</label>
+                                <Input label="Title" value={formData.title} onChange={(e) => setFormData({...formData, title: e.target.value})} required placeholder="e.g., Important Schedule Update" />
+                                <div style={{ marginBottom: '1.25rem' }}>
+                                    <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: '700', color: 'var(--text-light)', marginBottom: '0.5rem', textTransform: 'uppercase' }}>Message</label>
                                     <textarea 
                                         value={formData.message} 
                                         onChange={(e) => setFormData({...formData, message: e.target.value})} 
                                         required 
-                                        rows={5}
-                                        style={{ width: '100%', padding: '0.75rem', borderRadius: '0.75rem', border: '1px solid #e2e8f0', background: '#f8fafc', fontSize: '0.875rem' }}
-                                        placeholder="Detailed announcement details..."
+                                        rows={4}
+                                        style={{ width: '100%', padding: '0.75rem', borderRadius: '0.75rem', border: '1px solid var(--border-color)', background: 'var(--light)', fontSize: '0.9rem' }}
+                                        placeholder="Enter announcement details..."
                                     />
                                 </div>
 
-                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1.5rem' }}>
+                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1.25rem' }}>
                                     <div>
-                                        <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '600', color: '#475569', marginBottom: '0.5rem' }}>Target Audience</label>
+                                        <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: '700', color: 'var(--text-light)', marginBottom: '0.5rem', textTransform: 'uppercase' }}>Target</label>
                                         <select 
                                             value={formData.target_type} 
                                             onChange={(e) => setFormData({...formData, target_type: e.target.value, target_id: ''})}
-                                            style={{ width: '100%', padding: '0.75rem', borderRadius: '0.75rem', border: '1px solid #e2e8f0', background: '#f8fafc' }}
+                                            style={{ width: '100%', padding: '0.75rem', borderRadius: '0.75rem', border: '1px solid var(--border-color)', background: 'var(--light)' }}
                                         >
                                             <option value="all">All Students</option>
                                             <option value="batch">Specific Batch</option>
@@ -229,20 +227,20 @@ const AdminAnnouncements = () => {
                                     </div>
                                     {formData.target_type !== 'all' && (
                                         <div>
-                                            <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '600', color: '#475569', marginBottom: '0.5rem' }}>
+                                            <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: '700', color: 'var(--text-light)', marginBottom: '0.5rem', textTransform: 'uppercase' }}>
                                                 Select {formData.target_type === 'batch' ? 'Batch' : 'Student'}
                                             </label>
                                             <select 
                                                 value={formData.target_id} 
                                                 onChange={(e) => setFormData({...formData, target_id: e.target.value})}
                                                 required
-                                                style={{ width: '100%', padding: '0.75rem', borderRadius: '0.75rem', border: '1px solid #e2e8f0', background: '#f8fafc' }}
+                                                style={{ width: '100%', padding: '0.75rem', borderRadius: '0.75rem', border: '1px solid var(--border-color)', background: 'var(--light)' }}
                                             >
                                                 <option value="">-- Select --</option>
                                                 {formData.target_type === 'batch' ? (
                                                     batches.map(b => <option key={b.id} value={b.id}>{b.batch_name}</option>)
                                                 ) : (
-                                                    students.map(s => <option key={s.id} value={s.id}>{s.name} ({s.email})</option>)
+                                                    students.map(s => <option key={s.id} value={s.id}>{s.name}</option>)
                                                 )}
                                             </select>
                                         </div>
@@ -251,32 +249,32 @@ const AdminAnnouncements = () => {
 
                                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '2rem' }}>
                                     <div>
-                                        <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '600', color: '#475569', marginBottom: '0.5rem' }}>Publish Date/Time</label>
+                                        <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: '700', color: 'var(--text-light)', marginBottom: '0.5rem', textTransform: 'uppercase' }}>Publish Date</label>
                                         <input 
                                             type="datetime-local" 
                                             value={formData.publish_at} 
                                             onChange={(e) => setFormData({...formData, publish_at: e.target.value})}
-                                            style={{ width: '100%', padding: '0.75rem', borderRadius: '0.75rem', border: '1px solid #e2e8f0', background: '#f8fafc' }}
+                                            style={{ width: '100%', padding: '0.75rem', borderRadius: '0.75rem', border: '1px solid var(--border-color)', background: 'var(--light)' }}
                                         />
                                     </div>
                                     <div>
-                                        <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '600', color: '#475569', marginBottom: '0.5rem' }}>Initial Status</label>
+                                        <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: '700', color: 'var(--text-light)', marginBottom: '0.5rem', textTransform: 'uppercase' }}>Status</label>
                                         <select 
                                             value={formData.status} 
                                             onChange={(e) => setFormData({...formData, status: e.target.value})}
-                                            style={{ width: '100%', padding: '0.75rem', borderRadius: '0.75rem', border: '1px solid #e2e8f0', background: '#f8fafc' }}
+                                            style={{ width: '100%', padding: '0.75rem', borderRadius: '0.75rem', border: '1px solid var(--border-color)', background: 'var(--light)' }}
                                         >
-                                            <option value="published">Publish Now</option>
-                                            <option value="scheduled">Schedule</option>
-                                            <option value="draft">Save Draft</option>
+                                            <option value="published">Published</option>
+                                            <option value="scheduled">Scheduled</option>
+                                            <option value="draft">Draft</option>
                                         </select>
                                     </div>
                                 </div>
 
                                 <div style={{ display: 'flex', gap: '1rem', justifyContent: 'flex-end' }}>
                                     <Button variant="outline" type="button" onClick={() => setShowModal(false)}>Cancel</Button>
-                                    <Button type="submit" isLoading={submitting}>
-                                        {editingId ? 'Update Broadcast' : 'Post Announcement'}
+                                    <Button type="submit" isLoading={submitting} style={{ borderRadius: '12px' }}>
+                                        {editingId ? 'Update' : 'Post Announcement'}
                                     </Button>
                                 </div>
                             </form>
