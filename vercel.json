@@ -17,13 +17,7 @@
   ],
   "functions": {
     "api/*.js": {
-      "includeFiles": [
-        "server/db.js",
-        "server/app_factory.js",
-        "server/routes/**",
-        "server/services/**",
-        "server/middleware/**"
-      ]
+      "includeFiles": "server/db.js|server/app_factory.js|server/routes/**|server/services/**|server/middleware/**"
     }
   }
 }
