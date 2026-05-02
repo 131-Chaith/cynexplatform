@@ -95,8 +95,8 @@ app.get('/', (req, res) => {
     res.json({ message: 'Cynex Portal API is active' });
 });
 
-// Proper catch-all route using '*'
-app.all('*', (req, res) => {
+// Fallback for any other requests (404)
+app.use((req, res) => {
     res.status(404).json({ 
         error: 'Not Found',
         message: `Route ${req.originalUrl} does not exist on this server.`

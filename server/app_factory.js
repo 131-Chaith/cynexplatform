@@ -34,7 +34,7 @@ export function createModularApp(routePath, router) {
     });
 
     // Catch-all for the sub-module
-    app.all('*', (req, res) => {
+    app.use((req, res) => {
         res.status(404).json({ message: `Route not found in ${routePath}` });
     });
 
