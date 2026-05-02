@@ -16,7 +16,7 @@ export function createModularApp(routePath, router) {
         credentials: false
     };
     app.use(cors(corsOptions));
-    app.options('*', cors(corsOptions));
+    app.options('(.*)', cors(corsOptions)); // Express 5 wildcard syntax
     app.use(express.json({ limit: '10mb' }));
     app.use(express.urlencoded({ extended: true }));
     

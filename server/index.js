@@ -43,7 +43,7 @@ const corsOptions = {
     credentials: false
 };
 app.use(cors(corsOptions));
-app.options('*', cors(corsOptions)); // Handle preflight for all routes
+app.options('(.*)', cors(corsOptions)); // Handle preflight for all routes (Express 5 syntax)
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true }));
 

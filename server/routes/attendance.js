@@ -3,6 +3,7 @@ import { db } from '../db.js';
 import { authenticateToken, authorizeRole } from '../middleware/authMiddleware.js';
 import { generateQRToken, validateQRToken, markAttendance, getStudentStats, getStudentAnalytics, getStudentCalendar } from '../services/attendanceService.js';
 import { pullMeetAttendance, getSessionReport, createMeetSession } from '../services/googleMeetService.js';
+import { getAuthenticatedSheets } from './youtube.js';
 import { getAuthUrl, saveTokens } from '../services/googleAuthService.js';
 import crypto from 'crypto';
 import jwt from 'jsonwebtoken';
@@ -864,6 +865,69 @@ router.post('/google/callback', authenticateToken, authorizeRole('admin', 'instr
         res.json({ message: "Google account connected successfully." });
     } catch (error) {
         res.status(500).json({ message: error.message });
+    }
+});
+router.post('/sync-gsheets', authenticateToken, authorizeRole('admin', 'instructor'), async (req, res) => {
+    const { class_id, spreadsheet_url, sheet_name } = req.body;
+    
+    if (!class_id || !spreadsheet_url) {
+        return res.status(400).json({ message: "Class ID and Spreadsheet URL/ID are required." });
+    }
+
+    try {
+        const sheets = await getAuthenticatedSheets();
+        
+        // Extract ID if URL
+        let spreadsheetId = spreadsheet_url;
+        if (spreadsheet_url.includes('/d/')) {
+            spreadsheetId = spreadsheet_url.split('/d/')[1].split('/')[0];
+        }
+
+        const response = await sheets.spreadsheets.values.get({
+            spreadsheetId,
+            range: `${sheet_name || 'Sheet1'}!A:Z`,
+        });
+
+        const rows = response.data.values;
+        if (!rows || rows.length < 2) {
+            return res.status(400).json({ message: "No data found in the spreadsheet." });
+        }
+
+        // Find email column
+        const headers = rows[0].map(h => h.toLowerCase().trim());
+        const emailIdx = headers.indexOf('email');
+        
+        if (emailIdx === -1) {
+            return res.status(400).json({ message: "Could not find 'Email' column in spreadsheet." });
+        }
+
+        const emails = rows.slice(1).map(r => r[emailIdx]?.toLowerCase().trim()).filter(Boolean);
+        
+        if (emails.length === 0) {
+            return res.status(400).json({ message: "No valid emails found in spreadsheet." });
+        }
+
+        // Fetch students
+        const studentsRes = await db.execute("SELECT id, email FROM users WHERE role = 'student'");
+        const students = studentsRes.rows;
+
+        let syncCount = 0;
+        for (const student of students) {
+            if (emails.includes(student.email.toLowerCase().trim())) {
+                await db.execute({
+                    sql: `INSERT INTO attendance_records (session_id, student_id, status, join_time, attendance_type, remarks) 
+                          VALUES (?, ?, 'present', CURRENT_TIMESTAMP, 'online', 'Synced from Google Sheets')
+                          ON CONFLICT(session_id, student_id) DO UPDATE SET status = 'present', remarks = 'Updated via Google Sheets Sync'`,
+                    args: [class_id, student.id]
+                });
+                syncCount++;
+            }
+        }
+
+        res.json({ message: `Successfully synced attendance from Google Sheets.`, count: syncCount });
+    } catch (error) {
+        console.error("GSheets Sync Error:", error);
+        res.status(500).json({ message: error.message || "Failed to sync with Google Sheets." });
     }
 });
 
