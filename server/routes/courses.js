@@ -82,8 +82,8 @@ router.get('/', authenticateToken, async (req, res) => {
         const result = await db.execute({ sql, args });
         res.json(result.rows);
     } catch (error) {
-        console.error("Error in GET /api/courses:", error);
-        res.status(500).json({ message: error.message });
+        console.error("CRITICAL COURSES ERROR:", error);
+        res.status(500).json({ message: error.message, stack: error.stack });
     }
 });
 
