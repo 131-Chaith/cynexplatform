@@ -18,10 +18,10 @@ export const authenticateToken = (req, res, next) => {
     });
 };
 
-export const authorizeRole = (role) => {
+export const authorizeRole = (...roles) => {
     return (req, res, next) => {
-        console.log(`[AuthDebug] Checking Role: Required=${role}, UserRole=${req.user?.role}, UserID=${req.user?.id}`);
-        if (req.user && (req.user.role === role || req.user.role === 'super_admin')) {
+        console.log(`[AuthDebug] Checking Roles: Required=${roles.join(', ')}, UserRole=${req.user?.role}, UserID=${req.user?.id}`);
+        if (req.user && (roles.includes(req.user.role) || req.user.role === 'super_admin')) {
             next();
         } else {
             console.log("[AuthDebug] Access Denied");
