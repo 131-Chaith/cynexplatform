@@ -10,6 +10,10 @@ const StudentAnnouncements = () => {
 
     useEffect(() => {
         fetchAnnouncements();
+        
+        // Auto-sync every 30 seconds to reflect new broadcasts
+        const interval = setInterval(fetchAnnouncements, 30000);
+        return () => clearInterval(interval);
     }, []);
 
     const fetchAnnouncements = async () => {

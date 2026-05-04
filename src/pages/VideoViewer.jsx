@@ -89,12 +89,21 @@ const VideoViewer = () => {
                     backgroundColor: '#111',
                     position: 'relative'
                 }}>
-                    <video 
-                        src={videoUrl} 
-                        controls 
-                        autoPlay
-                        style={{ width: '100%', height: '100%', display: 'block' }}
-                    />
+                    {videoUrl.includes('youtube.com') || videoUrl.includes('youtu.be') ? (
+                        <iframe 
+                            src={videoUrl.replace('watch?v=', 'embed/').split('&')[0]} 
+                            style={{ width: '100%', height: '100%', border: 'none' }}
+                            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                            allowFullScreen
+                        />
+                    ) : (
+                        <video 
+                            src={videoUrl} 
+                            controls 
+                            autoPlay
+                            style={{ width: '100%', height: '100%', display: 'block' }}
+                        />
+                    )}
                 </div>
             </div>
 

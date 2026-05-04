@@ -149,7 +149,7 @@ export const pullMeetAttendance = async (sessionId, instructorId) => {
                 if (existing.rows[0].attendance_type !== 'manual') {
                     await db.execute({
                         sql: `UPDATE attendance_records SET 
-                                status = ?, duration_mins = ?, attendance_percentage = ?, 
+                                status = ?, duration = ?, attendance_percentage = ?, 
                                 attendance_type = 'meet_auto', remarks = ? 
                               WHERE id = ?`,
                         args: [status, duration, percentage, remarks, existing.rows[0].id]
@@ -159,7 +159,7 @@ export const pullMeetAttendance = async (sessionId, instructorId) => {
             } else {
                 await db.execute({
                     sql: `INSERT INTO attendance_records (
-                            session_id, student_id, status, duration_mins, 
+                            session_id, student_id, status, duration, 
                             attendance_percentage, attendance_type, remarks, join_time
                           ) VALUES (?, ?, ?, ?, ?, 'meet_auto', ?, ?)`,
                     args: [
@@ -229,7 +229,7 @@ export const pullMeetAttendance = async (sessionId, instructorId) => {
                     if (existing.rows[0].attendance_type !== 'manual') {
                         await db.execute({
                             sql: `UPDATE attendance_records SET 
-                                    status = ?, duration_mins = ?, attendance_percentage = ?, 
+                                    status = ?, duration = ?, attendance_percentage = ?, 
                                     attendance_type = 'meet_auto', remarks = ? 
                                   WHERE id = ?`,
                             args: [status, duration, percentage, remarks, existing.rows[0].id]
@@ -239,7 +239,7 @@ export const pullMeetAttendance = async (sessionId, instructorId) => {
                 } else {
                     await db.execute({
                         sql: `INSERT INTO attendance_records (
-                                session_id, student_id, status, duration_mins, 
+                                session_id, student_id, status, duration, 
                                 attendance_percentage, attendance_type, remarks, join_time
                               ) VALUES (?, ?, ?, ?, ?, 'meet_auto', ?, CURRENT_TIMESTAMP)`,
                         args: [sessionId, student.id, status, duration, percentage, remarks]

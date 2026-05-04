@@ -57,6 +57,10 @@ router.delete('/:id', authenticateToken, authorizeRole('admin'), async (req, res
             sql: "UPDATE students SET batch_id = NULL WHERE batch_id = ?",
             args: [batchId]
         });
+        await db.execute({
+            sql: "UPDATE attendance_sessions SET batch_id = NULL WHERE batch_id = ?",
+            args: [batchId]
+        });
 
         // 2. Delete batch-course associations
         await db.execute({

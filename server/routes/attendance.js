@@ -448,7 +448,7 @@ router.get('/analytics', authenticateToken, async (req, res) => {
 router.get('/reports/export', authenticateToken, async (req, res) => {
     try {
         const { batch_id } = req.query;
-        let sql = `SELECT r.*, s.topic, s.type, c.title as course_title, u.name as student_name, b.batch_name
+        let sql = `SELECT r.*, s.topic, s.type, s.start_time as session_start, c.title as course_title, u.name as student_name, b.batch_name
                   FROM attendance_records r
                   LEFT JOIN attendance_sessions s ON r.session_id = s.id
                   LEFT JOIN courses c ON s.course_id = c.id
@@ -477,8 +477,8 @@ router.get('/reports/export', authenticateToken, async (req, res) => {
             Batch: r.batch_name || 'N/A',
             Subject: r.course_title,
             Topic: r.topic,
-            Date: r.join_time ? new Date(r.join_time).toLocaleDateString() : 'N/A',
-            Time: r.join_time ? new Date(r.join_time).toLocaleTimeString() : 'N/A',
+            Date: r.session_start ? new Date(r.session_start).toLocaleDateString() : 'N/A',
+            Time: r.session_start ? new Date(r.session_start).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'N/A',
             Type: r.type,
             Status: r.status
         }));
@@ -643,7 +643,7 @@ router.post('/student/join-online', authenticateToken, async (req, res) => {
 router.get('/history/my', authenticateToken, async (req, res) => {
     try {
         const { batch_id } = req.query;
-        let sql = `SELECT r.*, s.topic, s.type, c.title as course_title, u.name as instructor_name, student_u.name as student_name, b.batch_name
+        let sql = `SELECT r.*, s.topic, s.type, s.start_time as session_start, c.title as course_title, u.name as instructor_name, student_u.name as student_name, b.batch_name
                   FROM attendance_records r
                   LEFT JOIN attendance_sessions s ON r.session_id = s.id
                   LEFT JOIN courses c ON s.course_id = c.id
@@ -798,12 +798,14 @@ router.get('/reports/export-advanced', authenticateToken, authorizeRole('admin',
                 b.batch_name as Batch, c.title as Course,
                 s.topic as Topic, s.type as Mode,
                 r.status as Status,
-                COALESCE(r.duration_mins, 0) as Duration_Mins,
+                COALESCE(r.duration, 0) as Duration_Mins,
                 COALESCE(r.attendance_percentage, 0) as Attendance_Pct,
                 CASE WHEN r.late_flag = 1 THEN 'Yes' ELSE 'No' END as Late_Join,
                 r.attendance_type as Record_Type,
                 r.remarks as Remarks,
-                DATE(r.join_time) as Date
+                DATE(s.start_time) as Date,
+                TIME(s.start_time) as Scheduled_Time,
+                DATE(r.join_time) as Actual_Join_Date
             FROM attendance_records r
             JOIN users u ON r.student_id = u.id
             JOIN attendance_sessions s ON r.session_id = s.id

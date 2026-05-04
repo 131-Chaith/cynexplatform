@@ -323,14 +323,10 @@ router.delete('/:id', authenticateToken, authorizeRole('admin'), async (req, res
             args: [courseId]
         });
 
-        // 4. Delete test results and questions first, then mock tests
-        console.log("Step 4: Deleting test results, questions, and mock tests...");
+        // 4. Delete test results first, then mock tests
+        console.log("Step 4: Deleting test results and mock tests...");
         await db.execute({
             sql: "DELETE FROM test_results WHERE test_id IN (SELECT id FROM mock_tests WHERE course_id = ?)",
-            args: [courseId]
-        });
-        await db.execute({
-            sql: "DELETE FROM questions WHERE test_id IN (SELECT id FROM mock_tests WHERE course_id = ?)",
             args: [courseId]
         });
         await db.execute({

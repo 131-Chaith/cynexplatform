@@ -392,7 +392,10 @@ const AttendanceDashboard = () => {
                                             {record.type.toUpperCase()}
                                         </span>
                                     </td>
-                                    <td style={{ padding: '1rem 1.5rem' }}>{new Date(record.join_time).toLocaleString()}</td>
+                                    <td style={{ padding: '1rem 1.5rem' }}>
+                                        <p style={{ fontWeight: '700', margin: 0 }}>{new Date(record.session_start || record.join_time).toLocaleDateString()}</p>
+                                        <p style={{ fontSize: '0.75rem', color: '#64748B', margin: 0 }}>{new Date(record.session_start || record.join_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</p>
+                                    </td>
                                     <td style={{ padding: '1rem 1.5rem' }}>
                                         <span style={{ padding: '0.35rem 0.75rem', borderRadius: '10px', fontWeight: '900', fontSize: '0.7rem', background: record.status === 'present' ? '#ECFDF5' : '#FEF2F2', color: record.status === 'present' ? '#059669' : '#DC2626' }}>
                                             {record.status}

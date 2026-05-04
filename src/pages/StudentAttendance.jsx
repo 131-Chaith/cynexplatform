@@ -272,7 +272,8 @@ const StudentAttendance = () => {
                                                     </div>
                                                 </td>
                                                 <td style={{ padding: '1.5rem', color: '#64748B', fontSize: '0.85rem' }}>
-                                                    {new Date(r.join_time).toLocaleString()}
+                                                    <p style={{ fontWeight: '700', color: '#1E293B', margin: 0 }}>{new Date(r.session_start || r.join_time).toLocaleDateString()}</p>
+                                                    <p style={{ margin: 0 }}>{new Date(r.session_start || r.join_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</p>
                                                 </td>
                                                 <td style={{ padding: '1.5rem' }}>
                                                     <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem', color: '#10B981', fontWeight: '900', fontSize: '0.85rem' }}>

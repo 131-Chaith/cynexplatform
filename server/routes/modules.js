@@ -57,8 +57,8 @@ router.post('/', authenticateToken, authorizeRole('admin'), async (req, res) => 
     console.log("Body:", req.body);
     try {
         await db.execute({
-            sql: "INSERT INTO modules (title, description) VALUES (?, ?)",
-            args: [title, description]
+            sql: "INSERT INTO modules (course_id, title, description) VALUES (?, ?, ?)",
+            args: [req.body.course_id || 0, title, description]
         });
         console.log("Module inserted successfully");
         res.status(201).json({ message: "Module Created Successfully" });
@@ -104,13 +104,7 @@ router.delete('/:id', authenticateToken, authorizeRole('admin'), async (req, res
             args: [moduleId]
         });
 
-        // 4. Delete questions related to mock tests in this module (if using questions table)
-        await db.execute({
-            sql: "DELETE FROM questions WHERE test_id IN (SELECT id FROM mock_tests WHERE module_id = ?)",
-            args: [moduleId]
-        });
-
-        // 5. Delete mock tests in this module
+        // 4. Delete mock tests in this module
         await db.execute({
             sql: "DELETE FROM mock_tests WHERE module_id = ?",
             args: [moduleId]

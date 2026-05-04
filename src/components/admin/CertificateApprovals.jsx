@@ -1,4 +1,5 @@
 import React from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useData } from '../../context/DataContext';
 import Card from '../Card';
 import Button from '../Button';
@@ -6,6 +7,7 @@ import { PlayCircle, CheckCircle, XCircle, Clock, User, Book, Award } from 'luci
 
 const CertificateApprovals = () => {
     const { data, approveCertificate, rejectCertificate } = useData();
+    const navigate = useNavigate();
     const [activeTab, setActiveTab] = React.useState('pending');
 
     // Filter requests based on tab
@@ -143,7 +145,7 @@ const CertificateApprovals = () => {
                                 cursor: 'pointer',
                                 position: 'relative',
                                 overflow: 'hidden'
-                            }} onClick={() => window.location.href = `/video-player?url=${req.video_link || req.videoLink}&back=/admin/certificates`}>
+                            }} onClick={() => navigate(`/video-player?url=${req.video_link || req.videoLink}&back=/admin/certificates`)}>
                                 <PlayCircle size={36} color="white" style={{ zIndex: 2 }} />
                                 <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(rgba(0,0,0,0), rgba(0,0,0,0.4))', zIndex: 1 }} />
                             </div>

@@ -128,7 +128,7 @@ router.get('/student', authenticateToken, async (req, res) => {
                 FROM announcements a
                 LEFT JOIN users u ON a.created_by = u.id
                 WHERE a.status = 'published' 
-                AND datetime(a.publish_at) <= datetime('now', '+6 hours')
+                AND datetime(a.publish_at) <= datetime('now', 'localtime')
                 AND (
                     a.target_type = 'all'
                     OR (a.target_type = 'batch' AND CAST(a.target_id AS TEXT) = CAST(? AS TEXT))
@@ -136,7 +136,7 @@ router.get('/student', authenticateToken, async (req, res) => {
                 )
                 ORDER BY a.publish_at DESC
             `,
-            args: [req.user.batch_id || '', req.user.id]
+            args: [String(req.user.batch_id || ''), String(req.user.id)]
         });
         res.json(result.rows);
     } catch (error) {
